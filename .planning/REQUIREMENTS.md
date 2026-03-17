@@ -59,26 +59,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BLAME-01 | — | Pending |
-| BLAME-02 | — | Pending |
-| BLAME-03 | — | Pending |
-| BLAME-04 | — | Pending |
-| BLAME-05 | — | Pending |
-| BLAME-06 | — | Pending |
-| TTIP-01 | — | Pending |
-| TTIP-02 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
-| UX-04 | — | Pending |
+| BLAME-01 | Phase 3 | Pending |
+| BLAME-02 | Phase 2 | Pending |
+| BLAME-03 | Phase 2 | Pending |
+| BLAME-04 | Phase 2 | Pending |
+| BLAME-05 | Phase 2 | Pending |
+| BLAME-06 | Phase 2 | Pending |
+| TTIP-01 | Phase 4 | Pending |
+| TTIP-02 | Phase 4 | Pending |
+| CONF-01 | Phase 3 | Pending |
+| CONF-02 | Phase 3 | Pending |
+| UX-01 | Phase 3 | Pending |
+| UX-02 | Phase 3 | Pending |
+| UX-03 | Phase 3 | Pending |
+| UX-04 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*

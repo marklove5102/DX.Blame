@@ -79,9 +79,27 @@ end;
 procedure CreateToolsMenu;
 var
   LNTAServices: INTAServices;
+  LToolsMenu: TMenuItem;
   LSubItem: TMenuItem;
+  LCaption: string;
+  i: Integer;
 begin
   if not Supports(BorlandIDEServices, INTAServices, LNTAServices) then
+    Exit;
+
+  // Find the IDE Tools menu by caption (Name varies across Delphi versions)
+  LToolsMenu := nil;
+  for i := 0 to LNTAServices.MainMenu.Items.Count - 1 do
+  begin
+    LCaption := StringReplace(LNTAServices.MainMenu.Items[i].Caption, '&', '', [rfReplaceAll]);
+    if SameText(LCaption, 'Tools') then
+    begin
+      LToolsMenu := LNTAServices.MainMenu.Items[i];
+      Break;
+    end;
+  end;
+
+  if LToolsMenu = nil then
     Exit;
 
   GMenuParentItem := TMenuItem.Create(nil);
@@ -100,7 +118,8 @@ begin
   LSubItem.Enabled := False;
   GMenuParentItem.Add(LSubItem);
 
-  LNTAServices.AddActionMenu('ToolsMenu', nil, GMenuParentItem);
+  // Add as child of the Tools menu, not next to it
+  LToolsMenu.Add(GMenuParentItem);
 end;
 
 /// <summary>
@@ -154,7 +173,7 @@ initialization
       cDXBlameName,
       LoadBitmap(FindResourceHInstance(HInstance), 'DXBLAMESPLASH'),
       False,
-      'Open Source'
+      cDXBlameDescription
     );
   end;
 

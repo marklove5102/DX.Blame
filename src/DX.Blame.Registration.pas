@@ -183,12 +183,12 @@ finalization
   RemoveToolsMenu;
 
   // 2. Remove wizard registration
-  if GWizardIndex > 0 then
+  if GWizardIndex >= 0 then
     if Assigned(BorlandIDEServices) then
       (BorlandIDEServices as IOTAWizardServices).RemoveWizard(GWizardIndex);
 
   // 3. Remove about box entry last
-  if GAboutPluginIndex > 0 then
+  if GAboutPluginIndex >= 0 then
     if Assigned(BorlandIDEServices) then
       (BorlandIDEServices as IOTAAboutBoxServices).RemovePluginInfo(GAboutPluginIndex);
 

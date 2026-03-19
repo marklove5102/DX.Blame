@@ -31,12 +31,25 @@ uses
   Winapi.Windows,
   DX.Blame.Version,
   DX.Blame.IDE.Notifier,
-  DX.Blame.Engine;
+  DX.Blame.Engine,
+  DX.Blame.Renderer,
+  DX.Blame.KeyBinding,
+  DX.Blame.Settings;
 
 var
   GWizardIndex: Integer = -1;
   GAboutPluginIndex: Integer = -1;
   GMenuParentItem: TMenuItem = nil;
+  GMenuHandler: TObject = nil;
+
+type
+  /// <summary>
+  /// Simple handler object for the Enable Blame menu item OnClick event.
+  /// </summary>
+  TDXBlameMenuHandler = class
+  public
+    procedure ToggleBlame(Sender: TObject);
+  end;
 
 type
   /// <summary>
@@ -74,9 +87,27 @@ begin
   // No-op for Phase 1 -- wizard exists for IDE registration only
 end;
 
+{ TDXBlameMenuHandler }
+
+procedure TDXBlameMenuHandler.ToggleBlame(Sender: TObject);
+var
+  LMenuItem: TMenuItem;
+begin
+  BlameSettings.Enabled := not BlameSettings.Enabled;
+  BlameSettings.Save;
+
+  if Sender is TMenuItem then
+  begin
+    LMenuItem := TMenuItem(Sender);
+    LMenuItem.Checked := BlameSettings.Enabled;
+  end;
+
+  InvalidateAllEditors;
+end;
+
 /// <summary>
 /// Creates the "DX Blame" submenu under the IDE Tools menu with
-/// two disabled placeholder items: "Enable Blame" and "Settings...".
+/// "Enable Blame" (toggle) and "Settings..." (disabled placeholder).
 /// </summary>
 procedure CreateToolsMenu;
 var
@@ -104,16 +135,22 @@ begin
   if LToolsMenu = nil then
     Exit;
 
+  // Create the menu handler for event callbacks
+  GMenuHandler := TDXBlameMenuHandler.Create;
+
   GMenuParentItem := TMenuItem.Create(nil);
   GMenuParentItem.Caption := 'DX Blame';
   GMenuParentItem.Name := 'DXBlameMenu';
 
+  // Enable Blame -- checkbox-style toggle
   LSubItem := TMenuItem.Create(GMenuParentItem);
   LSubItem.Caption := 'Enable Blame';
   LSubItem.Name := 'DXBlameEnableItem';
-  LSubItem.Enabled := False;
+  LSubItem.Checked := BlameSettings.Enabled;
+  LSubItem.OnClick := TDXBlameMenuHandler(GMenuHandler).ToggleBlame;
   GMenuParentItem.Add(LSubItem);
 
+  // Settings... -- disabled until settings dialog is implemented (Plan 03)
   LSubItem := TMenuItem.Create(GMenuParentItem);
   LSubItem.Caption := 'Settings...';
   LSubItem.Name := 'DXBlameSettingsItem';
@@ -131,6 +168,7 @@ end;
 procedure RemoveToolsMenu;
 begin
   FreeAndNil(GMenuParentItem);
+  FreeAndNil(GMenuHandler);
 end;
 
 /// <summary>
@@ -176,6 +214,10 @@ begin
     if LProject <> nil then
       BlameEngine.Initialize(ExtractFileDir(LProject.FileName));
   end;
+
+  // Register renderer and keyboard binding for inline blame display
+  RegisterRenderer;
+  RegisterKeyBinding;
 end;
 
 initialization
@@ -194,18 +236,24 @@ initialization
 
 finalization
   // Reverse-order cleanup to prevent access violations on BPL unload:
-  // 1. Remove IDE notifiers first (notifiers must stop before UI cleanup)
+  // 1. Stop keyboard binding (must stop before renderer to avoid toggle during unload)
+  UnregisterKeyBinding;
+
+  // 2. Stop renderer (must stop painting before notifiers are removed)
+  UnregisterRenderer;
+
+  // 3. Remove IDE notifiers (notifiers must stop before UI cleanup)
   UnregisterIDENotifiers;
 
-  // 2. Remove UI elements (menu items)
+  // 4. Remove UI elements (menu items and handler)
   RemoveToolsMenu;
 
-  // 3. Remove wizard registration
+  // 5. Remove wizard registration
   if GWizardIndex >= 0 then
     if Assigned(BorlandIDEServices) then
       (BorlandIDEServices as IOTAWizardServices).RemoveWizard(GWizardIndex);
 
-  // 4. Remove about box entry last
+  // 6. Remove about box entry last
   if GAboutPluginIndex >= 0 then
     if Assigned(BorlandIDEServices) then
       (BorlandIDEServices as IOTAAboutBoxServices).RemovePluginInfo(GAboutPluginIndex);

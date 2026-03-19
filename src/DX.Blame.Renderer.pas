@@ -24,6 +24,7 @@ uses
   System.Classes,
   System.SysUtils,
   System.Types,
+  Vcl.Controls,
   Vcl.Graphics,
   Winapi.Windows,
   ToolsAPI,
@@ -111,7 +112,9 @@ var
 
 function TDXBlameRenderer.AllowedEvents: TCodeEditorEvents;
 begin
-  Result := [cevPaintLineEvents, cevCaretEvents];
+  // cevPaintLineEvents for PaintLine; cevKeyboardEvents is not needed because
+  // EditorSetCaretPos is part of INTACodeEditorEvents370 which fires regardless
+  Result := [cevPaintLineEvents];
 end;
 
 function TDXBlameRenderer.AllowedLineStages: TPaintLineStages;

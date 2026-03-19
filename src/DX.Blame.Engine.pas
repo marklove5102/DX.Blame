@@ -105,6 +105,7 @@ implementation
 
 uses
   ToolsAPI,
+  ToolsAPI.Editor,
   DX.Blame.Git.Discovery,
   DX.Blame.Git.Process,
   DX.Blame.Git.Blame;
@@ -384,6 +385,7 @@ end;
 procedure TBlameEngine.HandleBlameComplete(const AFileName: string; AData: TBlameData);
 var
   LKey: string;
+  LEditorServices: INTACodeEditorServices;
 begin
   LKey := LowerCase(AFileName);
 
@@ -396,7 +398,11 @@ begin
   end;
 
   FCache.Store(AFileName, AData);
-  // Phase 3 will add: notify UI to repaint
+
+  // Trigger editor repaint so renderer picks up new blame data
+  LEditorServices := nil;
+  if Supports(BorlandIDEServices, INTACodeEditorServices, LEditorServices) then
+    LEditorServices.InvalidateTopEditor;
 end;
 
 procedure TBlameEngine.HandleBlameError(const AFileName: string; const AError: string);

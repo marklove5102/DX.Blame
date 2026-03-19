@@ -1,2 +1,8 @@
 // 24x24 bitmap for splash screen and about dialog
 DXBLAMESPLASH BITMAP "DX.Blame.SplashIcon.bmp"
+
+// Additional sizes for future use (high-DPI, dialogs, etc.)
+DXBLAMEICON32 BITMAP "DX.Blame.Icon32.bmp"
+DXBLAMEICON48 BITMAP "DX.Blame.Icon48.bmp"
+DXBLAMEICON64 BITMAP "DX.Blame.Icon64.bmp"
+DXBLAMEICON128 BITMAP "DX.Blame.Icon128.bmp"

@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100" width="360" height="100" role="img" aria-labelledby="c2drh-title">
+  <title id="c2drh-title">DX.Blame Logo - Concept 2: Delphi Red (Horizontal)</title>
+  <defs>
+    <linearGradient id="grad-bg-dr" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A0A0A" />
+      <stop offset="100%" style="stop-color:#2D1111" />
+    </linearGradient>
+    <linearGradient id="grad-accent-dr" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#E42415" />
+      <stop offset="100%" style="stop-color:#EE4535" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <g transform="translate(8, 8)">
+    <rect x="0" y="0" width="84" height="84" rx="18" fill="url(#grad-bg-dr)" />
+
+    <!-- Code lines -->
+    <g opacity="0.35">
+      <rect x="12" y="20" width="22" height="2.5" rx="1.25" fill="#F87171" />
+      <rect x="12" y="28" width="16" height="2.5" rx="1.25" fill="#F87171" />
+      <rect x="12" y="36" width="26" height="2.5" rx="1.25" fill="#F87171" />
+      <rect x="12" y="44" width="20" height="2.5" rx="1.25" fill="#F87171" />
+      <rect x="12" y="52" width="24" height="2.5" rx="1.25" fill="#F87171" />
+      <rect x="12" y="60" width="14" height="2.5" rx="1.25" fill="#F87171" />
+    </g>
+
+    <!-- Highlighted line -->
+    <rect x="10" y="42" width="64" height="7" rx="2" fill="#E42415" opacity="0.15" />
+
+    <!-- Blame annotation -->
+    <rect x="44" y="41" width="28" height="9" rx="2.5" fill="url(#grad-accent-dr)" opacity="0.9" />
+    <text x="49" y="48" font-family="'Consolas', monospace" font-size="5.5" font-weight="700" fill="#FFFFFF">OM 3d</text>
+
+    <!-- Git branch -->
+    <g transform="translate(60, 16)" opacity="0.5">
+      <circle cx="0" cy="0" r="3" fill="none" stroke="#F87171" stroke-width="1.2" />
+      <circle cx="10" cy="0" r="3" fill="none" stroke="#F87171" stroke-width="1.2" />
+      <circle cx="5" cy="10" r="3" fill="none" stroke="#F87171" stroke-width="1.2" />
+      <path d="M3,0 L7,0" stroke="#F87171" stroke-width="1.2" />
+      <path d="M1.5,2.5 Q5,7 5,7" stroke="#F87171" stroke-width="1.2" fill="none" />
+      <path d="M8.5,2.5 Q5,7 5,7" stroke="#F87171" stroke-width="1.2" fill="none" />
+    </g>
+  </g>
+
+  <!-- Text -->
+  <g>
+    <text x="110" y="48" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="32" font-weight="700" fill="#1E1B4B" letter-spacing="1">
+      DX<tspan fill="#E42415">.</tspan>Blame
+    </text>
+    <text x="110" y="68" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#6B7280" letter-spacing="2">
+      GIT BLAME FOR DELPHI
+    </text>
+  </g>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="c2sm-title">
+  <title id="c2sm-title">DX.Blame Logo - Simplified for small sizes (24-32px)</title>
+  <defs>
+    <linearGradient id="grad-bg-sm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A0A0A" />
+      <stop offset="100%" style="stop-color:#2D1111" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="url(#grad-bg-sm)" />
+
+  <!-- 3 bold code lines (fewer, thicker for readability) -->
+  <rect x="22" y="36" width="40" height="6" rx="3" fill="#F87171" opacity="0.4" />
+  <rect x="22" y="56" width="30" height="6" rx="3" fill="#F87171" opacity="0.4" />
+  <rect x="22" y="76" width="46" height="6" rx="3" fill="#F87171" opacity="0.4" />
+
+  <!-- Highlighted active line with large blame tag -->
+  <rect x="14" y="50" width="100" height="18" rx="4" fill="#E42415" opacity="0.12" />
+  <rect x="60" y="52" width="48" height="14" rx="5" fill="#E42415" />
+</svg>

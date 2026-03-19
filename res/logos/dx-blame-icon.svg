@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="c2dr-title">
+  <title id="c2dr-title">DX.Blame Logo - Concept 2: Delphi Red Variant</title>
+  <defs>
+    <linearGradient id="grad-bg-dr" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A0A0A" />
+      <stop offset="100%" style="stop-color:#2D1111" />
+    </linearGradient>
+    <linearGradient id="grad-accent-dr" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#E42415" />
+      <stop offset="100%" style="stop-color:#EE4535" />
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="120" height="120" rx="24" fill="url(#grad-bg-dr)" />
+
+  <!-- Code lines -->
+  <g opacity="0.35">
+    <rect x="20" y="32" width="32" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="42" width="24" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="52" width="38" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="62" width="28" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="72" width="34" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="82" width="20" height="3" rx="1.5" fill="#F87171" />
+    <rect x="20" y="92" width="30" height="3" rx="1.5" fill="#F87171" />
+  </g>
+
+  <!-- Highlighted line -->
+  <rect x="16" y="59" width="96" height="9" rx="2" fill="#E42415" opacity="0.15" />
+
+  <!-- Blame annotation -->
+  <line x1="66" y1="63" x2="72" y2="63" stroke="#E42415" stroke-width="1.5" opacity="0.6" />
+  <rect x="72" y="57" width="36" height="12" rx="3" fill="url(#grad-accent-dr)" opacity="0.9" />
+  <text x="78" y="66" font-family="'Consolas', monospace" font-size="7" font-weight="700" fill="#FFFFFF">OM</text>
+  <text x="90" y="66" font-family="'Consolas', monospace" font-size="6" font-weight="400" fill="#FEE2E2" opacity="0.8">3d</text>
+
+  <!-- Git branch -->
+  <g transform="translate(92, 24)" opacity="0.5">
+    <circle cx="0" cy="0" r="3.5" fill="none" stroke="#F87171" stroke-width="1.5" />
+    <circle cx="12" cy="0" r="3.5" fill="none" stroke="#F87171" stroke-width="1.5" />
+    <circle cx="6" cy="12" r="3.5" fill="none" stroke="#F87171" stroke-width="1.5" />
+    <path d="M3.5,0 L8.5,0" stroke="#F87171" stroke-width="1.5" />
+    <path d="M2,3 Q6,8 6,8.5" stroke="#F87171" stroke-width="1.5" fill="none" />
+    <path d="M10,3 Q6,8 6,8.5" stroke="#F87171" stroke-width="1.5" fill="none" />
+  </g>
+</svg>

@@ -28,10 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Plugin appears in the IDE splash screen and Help > About dialog
   3. User can uninstall and reinstall the BPL without IDE crashes or access violations
   4. OTA notifier registration and removal lifecycle is centralized and leak-free
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — Project scaffold, build infrastructure, and OTA registration implementation
+- [ ] 01-02-PLAN.md — DUnitX tests and IDE integration verification
 
 ### Phase 2: Blame Data Pipeline
 **Goal**: The plugin detects git repos, executes git blame asynchronously, parses porcelain output, and stores results in a thread-safe per-file cache
@@ -81,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Package Foundation | 0/? | Not started | - |
+| 1. Package Foundation | 0/2 | Planning complete | - |
 | 2. Blame Data Pipeline | 0/? | Not started | - |
 | 3. Inline Rendering and UX | 0/? | Not started | - |
 | 4. Tooltip and Commit Detail | 0/? | Not started | - |

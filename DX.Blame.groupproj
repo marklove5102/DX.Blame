@@ -1,0 +1,35 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="src\DX.Blame.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="DX_Blame">
+        <MSBuild Projects="src\DX.Blame.dproj"/>
+    </Target>
+    <Target Name="DX_Blame:Clean">
+        <MSBuild Projects="src\DX.Blame.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DX_Blame:Make">
+        <MSBuild Projects="src\DX.Blame.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="DX_Blame"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="DX_Blame:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="DX_Blame:Make"/>
+    </Target>
+</Project>

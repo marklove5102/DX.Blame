@@ -21,17 +21,17 @@ unit DX.Blame.Navigation;
 interface
 
 /// <summary>
-/// Opens the file at the parent commit of ACommitHash in a new editor tab.
-/// Shows an IDE message if the commit has no parent (root commit).
+/// Opens the file at the specified commit in a new editor tab.
+/// Shows an informational message if the file doesn't exist at that commit.
 /// </summary>
-procedure NavigateToParentRevision(const AFileName: string;
+procedure NavigateToRevision(const AFileName: string;
   const ACommitHash: string; const ARepoRoot: string);
 
 /// <summary>
-/// Returns True if the commit hash is valid for parent navigation.
+/// Returns True if the commit hash is valid for revision navigation.
 /// Returns False for empty hashes or uncommitted lines.
 /// </summary>
-function IsParentRevisionAvailable(const ACommitHash: string): Boolean;
+function IsRevisionAvailable(const ACommitHash: string): Boolean;
 
 /// <summary>
 /// Attaches "Previous Revision" menu item to the editor context menu.
@@ -56,11 +56,9 @@ uses
   DX.Blame.Git.Types,
   DX.Blame.Git.Discovery,
   DX.Blame.Git.Process,
-  DX.Blame.Engine;
-
-const
-  cMenuItemName = 'DXBlamePreviousRevision';
-  cMenuItemCaption = 'Previous Revision';
+  DX.Blame.Engine,
+  DX.Blame.Formatter,
+  DX.Blame.Settings;
 
 type
   /// <summary>
@@ -69,39 +67,14 @@ type
   /// </summary>
   TNavigationMenuHandler = class
   public
-    procedure OnPreviousRevisionClick(Sender: TObject);
+    procedure OnRevisionClick(Sender: TObject);
+    procedure OnEditorPopup(Sender: TObject);
   end;
 
 var
   GContextMenuItem: TMenuItem;
+  GSeparatorItem: TMenuItem;
   GMenuHandler: TNavigationMenuHandler;
-
-/// <summary>
-/// Resolves the parent commit hash using git rev-parse.
-/// Returns empty string if no parent exists (root commit).
-/// </summary>
-function ResolveParentHash(const ACommitHash, ARepoRoot: string): string;
-var
-  LGitPath: string;
-  LProcess: TGitProcess;
-  LOutput: string;
-  LExitCode: Integer;
-begin
-  Result := '';
-
-  LGitPath := FindGitExecutable;
-  if LGitPath = '' then
-    Exit;
-
-  LProcess := TGitProcess.Create(LGitPath, ARepoRoot);
-  try
-    LExitCode := LProcess.Execute('rev-parse ' + ACommitHash + '^', LOutput);
-    if LExitCode = 0 then
-      Result := Trim(LOutput);
-  finally
-    LProcess.Free;
-  end;
-end;
 
 /// <summary>
 /// Retrieves file content at a specific commit via git show.
@@ -129,15 +102,28 @@ begin
   end;
 end;
 
-function IsParentRevisionAvailable(const ACommitHash: string): Boolean;
+function IsRevisionAvailable(const ACommitHash: string): Boolean;
 begin
   Result := (ACommitHash <> '') and (ACommitHash <> cUncommittedHash);
 end;
 
-procedure NavigateToParentRevision(const AFileName: string;
+/// <summary>
+/// Formats the time portion for the context menu caption, matching the
+/// user's configured date format (relative or absolute).
+/// </summary>
+function FormatRevisionTime(ADateTime: TDateTime): string;
+begin
+  case BlameSettings.DateFormat of
+    dfRelative: Result := FormatRelativeTime(ADateTime);
+    dfAbsolute: Result := FormatDateTime('yyyy-mm-dd', ADateTime);
+  else
+    Result := FormatRelativeTime(ADateTime);
+  end;
+end;
+
+procedure NavigateToRevision(const AFileName: string;
   const ACommitHash: string; const ARepoRoot: string);
 var
-  LParentHash: string;
   LRelPath: string;
   LContent: string;
   LTempDir: string;
@@ -147,32 +133,26 @@ var
   LExt: string;
   LActionServices: IOTAActionServices;
 begin
-  if not IsParentRevisionAvailable(ACommitHash) then
+  if not IsRevisionAvailable(ACommitHash) then
     Exit;
 
-  // 1. Resolve parent hash
-  LParentHash := ResolveParentHash(ACommitHash, ARepoRoot);
-  if LParentHash = '' then
-  begin
-    if Supports(BorlandIDEServices, IOTAActionServices) then
-      MessageDlg('This is the root commit -- no parent revision available.', mtInformation, [mbOK], 0);
-    Exit;
-  end;
+  LShortHash := Copy(ACommitHash, 1, 7);
 
-  // 2. Compute relative path (forward slashes for git)
+  // 1. Compute relative path (forward slashes for git)
   LRelPath := ExtractRelativePath(IncludeTrailingPathDelimiter(ARepoRoot), AFileName);
   LRelPath := StringReplace(LRelPath, '\', '/', [rfReplaceAll]);
 
-  // 3. Get file content at parent commit
-  LContent := GetFileAtCommit(LParentHash, LRelPath, ARepoRoot);
+  // 2. Get file content at the annotated commit
+  LContent := GetFileAtCommit(ACommitHash, LRelPath, ARepoRoot);
   if LContent = '' then
   begin
-    MessageDlg('Could not retrieve file content at parent revision.', mtWarning, [mbOK], 0);
+    MessageDlg(Format(
+      'Could not retrieve %s at commit %s.',
+      [ExtractFileName(AFileName), LShortHash]), mtWarning, [mbOK], 0);
     Exit;
   end;
 
-  // 4. Write to temp file
-  LShortHash := Copy(LParentHash, 1, 7);
+  // 3. Write to temp file
   LBaseName := ChangeFileExt(ExtractFileName(AFileName), '');
   LExt := ExtractFileExt(AFileName);
   LTempDir := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) + 'DX.Blame';
@@ -181,28 +161,28 @@ begin
 
   TFile.WriteAllText(LTempFile, LContent, TEncoding.UTF8);
 
-  // 5. Open in IDE
+  // 4. Open in IDE
   if Supports(BorlandIDEServices, IOTAActionServices, LActionServices) then
-  begin
     LActionServices.OpenFile(LTempFile);
-
-    // 6. Trigger blame on the temp file so annotations appear
-    BlameEngine.RequestBlame(LTempFile);
-  end;
 end;
 
 { TNavigationMenuHandler }
 
-procedure TNavigationMenuHandler.OnPreviousRevisionClick(Sender: TObject);
+/// <summary>
+/// Returns the blame line info for the current editor caret line.
+/// Returns False if blame data is not available.
+/// </summary>
+function TryGetCurrentLineInfo(out AFileName: string;
+  out ALineInfo: TBlameLineInfo): Boolean;
 var
   LEditorServices: IOTAEditorServices;
   LTopView: IOTAEditView;
-  LFileName: string;
   LLine: Integer;
   LData: TBlameData;
-  LLineInfo: TBlameLineInfo;
-  LRepoRoot: string;
 begin
+  Result := False;
+  AFileName := '';
+
   if not Supports(BorlandIDEServices, IOTAEditorServices, LEditorServices) then
     Exit;
 
@@ -210,26 +190,87 @@ begin
   if LTopView = nil then
     Exit;
 
-  LFileName := LTopView.Buffer.FileName;
+  AFileName := LTopView.Buffer.FileName;
   LLine := LTopView.CursorPos.Line;
 
-  if not BlameEngine.GitAvailable then
-    Exit;
-
-  LRepoRoot := BlameEngine.RepoRoot;
-
-  if not BlameEngine.Cache.TryGet(LFileName, LData) then
+  if not BlameEngine.Cache.TryGet(AFileName, LData) then
     Exit;
 
   if (LLine < 1) or (LLine > Length(LData.Lines)) then
     Exit;
 
-  LLineInfo := LData.Lines[LLine - 1];
+  ALineInfo := LData.Lines[LLine - 1];
+  Result := True;
+end;
 
-  if not IsParentRevisionAvailable(LLineInfo.CommitHash) then
+procedure TNavigationMenuHandler.OnRevisionClick(Sender: TObject);
+var
+  LFileName: string;
+  LLineInfo: TBlameLineInfo;
+begin
+  if not BlameEngine.GitAvailable then
     Exit;
 
-  NavigateToParentRevision(LFileName, LLineInfo.CommitHash, LRepoRoot);
+  if not TryGetCurrentLineInfo(LFileName, LLineInfo) then
+    Exit;
+
+  if not IsRevisionAvailable(LLineInfo.CommitHash) then
+    Exit;
+
+  NavigateToRevision(LFileName, LLineInfo.CommitHash, BlameEngine.RepoRoot);
+end;
+
+var
+  GHookedPopup: TPopupMenu;
+  GOriginalOnPopup: TNotifyEvent;
+
+/// <summary>
+/// Removes our dynamically injected items from the popup menu.
+/// Called before each re-injection and during detach.
+/// </summary>
+procedure RemoveOurItems;
+begin
+  // Free in reverse order; items remove themselves from parent
+  FreeAndNil(GContextMenuItem);
+  FreeAndNil(GSeparatorItem);
+end;
+
+procedure TNavigationMenuHandler.OnEditorPopup(Sender: TObject);
+var
+  LFileName: string;
+  LLineInfo: TBlameLineInfo;
+  LCaption: string;
+  LAvailable: Boolean;
+begin
+  // Clean up any leftover items from previous popup
+  RemoveOurItems;
+
+  if (Sender is TPopupMenu) then
+  begin
+    // Determine caption and availability from current line's blame data
+    LAvailable := BlameEngine.GitAvailable and
+      TryGetCurrentLineInfo(LFileName, LLineInfo) and
+      IsRevisionAvailable(LLineInfo.CommitHash);
+
+    if LAvailable then
+      LCaption := 'Show revision ' + FormatRevisionTime(LLineInfo.AuthorTime)
+    else
+      LCaption := 'Show revision...';
+
+    GSeparatorItem := TMenuItem.Create(nil);
+    GSeparatorItem.Caption := '-';
+    TPopupMenu(Sender).Items.Add(GSeparatorItem);
+
+    GContextMenuItem := TMenuItem.Create(nil);
+    GContextMenuItem.Caption := LCaption;
+    GContextMenuItem.Enabled := LAvailable;
+    GContextMenuItem.OnClick := Self.OnRevisionClick;
+    TPopupMenu(Sender).Items.Add(GContextMenuItem);
+  end;
+
+  // Chain to original OnPopup handler
+  if Assigned(GOriginalOnPopup) then
+    GOriginalOnPopup(Sender);
 end;
 
 /// <summary>
@@ -263,47 +304,32 @@ end;
 procedure AttachContextMenu;
 var
   LPopup: TPopupMenu;
-  LSeparator: TMenuItem;
 begin
-  if GContextMenuItem <> nil then
+  if GHookedPopup <> nil then
     Exit;
 
   LPopup := FindEditorPopupMenu;
   if LPopup = nil then
     Exit;
 
-  // Add separator before our item
-  LSeparator := TMenuItem.Create(LPopup);
-  LSeparator.Caption := '-';
-  LSeparator.Name := 'DXBlameSeparator';
-  LPopup.Items.Add(LSeparator);
-
-  GContextMenuItem := TMenuItem.Create(LPopup);
-  GContextMenuItem.Caption := cMenuItemCaption;
-  GContextMenuItem.Name := cMenuItemName;
+  // Hook the OnPopup event to inject items dynamically each time
   if GMenuHandler = nil then
     GMenuHandler := TNavigationMenuHandler.Create;
-  GContextMenuItem.OnClick := GMenuHandler.OnPreviousRevisionClick;
-  LPopup.Items.Add(GContextMenuItem);
+  GOriginalOnPopup := LPopup.OnPopup;
+  LPopup.OnPopup := GMenuHandler.OnEditorPopup;
+  GHookedPopup := LPopup;
 end;
 
 procedure DetachContextMenu;
-var
-  LPopup: TPopupMenu;
-  LSeparator: TComponent;
 begin
-  if GContextMenuItem = nil then
-    Exit;
+  RemoveOurItems;
 
-  LPopup := FindEditorPopupMenu;
-  if LPopup <> nil then
-  begin
-    LSeparator := LPopup.FindComponent('DXBlameSeparator');
-    if LSeparator <> nil then
-      LSeparator.Free;
-  end;
+  // Restore original OnPopup handler
+  if (GHookedPopup <> nil) and Assigned(GOriginalOnPopup) then
+    GHookedPopup.OnPopup := GOriginalOnPopup;
 
-  FreeAndNil(GContextMenuItem);
+  GHookedPopup := nil;
+  GOriginalOnPopup := nil;
   FreeAndNil(GMenuHandler);
 end;
 

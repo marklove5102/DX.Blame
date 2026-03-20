@@ -214,15 +214,16 @@ begin
     LGitDir := TPath.Combine(LDir, '.git');
     if TDirectory.Exists(LGitDir) then
     begin
-      // Verify with git rev-parse --show-toplevel
+      // Verify with git rev-parse to confirm valid repo, but use LDir as
+      // the root path. git rev-parse --show-toplevel may return a UNC path
+      // that differs from the mapped drive letter the IDE uses, which breaks
+      // relative path computation.
       LGitPath := FindGitExecutable;
       if LGitPath <> '' then
       begin
         if ExecuteGitSync(LGitPath, LDir, 'rev-parse --show-toplevel', LOutput) = 0 then
         begin
-          Result := Trim(LOutput);
-          // Normalize forward slashes from git to backslashes
-          Result := StringReplace(Result, '/', '\', [rfReplaceAll]);
+          Result := LDir;
           GCachedRepoRoot := Result;
           GCachedRepoRootSource := APath;
           Exit;

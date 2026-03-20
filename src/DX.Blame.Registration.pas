@@ -95,7 +95,15 @@ end;
 procedure TDXBlameMenuHandler.ToggleBlame(Sender: TObject);
 var
   LMenuItem: TMenuItem;
+  {$IFDEF DEBUG}
+  LMsgServices: IOTAMessageServices;
+  {$ENDIF}
 begin
+  {$IFDEF DEBUG}
+  if Supports(BorlandIDEServices, IOTAMessageServices, LMsgServices) then
+    LMsgServices.AddTitleMessage('DX.Blame: ToggleBlame called, was=' + BoolToStr(BlameSettings.Enabled, True));
+  {$ENDIF}
+
   BlameSettings.Enabled := not BlameSettings.Enabled;
   BlameSettings.Save;
 
@@ -154,14 +162,18 @@ begin
   // Create the menu handler for event callbacks
   GMenuHandler := TDXBlameMenuHandler.Create;
 
+  {$IFDEF DEBUG}
+  if Supports(BorlandIDEServices, IOTAMessageServices) then
+    (BorlandIDEServices as IOTAMessageServices).AddTitleMessage(
+      'DX.Blame: menu handler created, OnClick assigned');
+  {$ENDIF}
+
   GMenuParentItem := TMenuItem.Create(nil);
   GMenuParentItem.Caption := 'DX Blame';
-  GMenuParentItem.Name := 'DXBlameMenu';
 
   // Enable Blame -- checkbox-style toggle
   LSubItem := TMenuItem.Create(GMenuParentItem);
   LSubItem.Caption := 'Enable Blame';
-  LSubItem.Name := 'DXBlameEnableItem';
   LSubItem.Checked := BlameSettings.Enabled;
   LSubItem.OnClick := TDXBlameMenuHandler(GMenuHandler).ToggleBlame;
   GMenuParentItem.Add(LSubItem);
@@ -169,7 +181,6 @@ begin
   // Settings... -- opens configuration dialog
   LSubItem := TMenuItem.Create(GMenuParentItem);
   LSubItem.Caption := 'Settings...';
-  LSubItem.Name := 'DXBlameSettingsItem';
   LSubItem.OnClick := TDXBlameMenuHandler(GMenuHandler).ShowSettings;
   GMenuParentItem.Add(LSubItem);
 

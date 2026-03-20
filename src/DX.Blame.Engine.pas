@@ -58,6 +58,8 @@ type
     function IsSourceFile(const AFileName: string): Boolean;
     procedure CancelAllThreads;
     procedure ClearAllTimers;
+    /// <summary>Removes thread from active dictionary. Called by thread before FreeOnTerminate.</summary>
+    procedure UnregisterThread(const AKey: string);
   public
     constructor Create;
     destructor Destroy; override;
@@ -165,6 +167,10 @@ begin
       LData := TBlameData.Create(LFileName);
       LData.Lines := LLines;
       LData.Timestamp := Now;
+
+      // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
+      LEngine.UnregisterThread(LowerCase(LFileName));
+
       TThread.Queue(nil,
         procedure
         begin
@@ -173,6 +179,9 @@ begin
     end
     else
     begin
+      // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
+      LEngine.UnregisterThread(LowerCase(LFileName));
+
       TThread.Queue(nil,
         procedure
         begin
@@ -238,6 +247,9 @@ begin
   end;
 
   FGitAvailable := True;
+  {$IFDEF DEBUG}
+  LogToIDE('DX.Blame: initialized, repo root = ' + FRepoRoot);
+  {$ENDIF}
 end;
 
 procedure TBlameEngine.RequestBlame(const AFileName: string);
@@ -247,10 +259,24 @@ var
   LExisting: TBlameThread;
 begin
   if not FGitAvailable then
+  begin
+    {$IFDEF DEBUG}
+    LogToIDE('DX.Blame: skip blame (git not available) ' + ExtractFileName(AFileName));
+    {$ENDIF}
     Exit;
+  end;
 
   if not IsSourceFile(AFileName) then
+  begin
+    {$IFDEF DEBUG}
+    LogToIDE('DX.Blame: skip blame (not source/out of repo) ' + ExtractFileName(AFileName));
+    {$ENDIF}
     Exit;
+  end;
+
+  {$IFDEF DEBUG}
+  LogToIDE('DX.Blame: requesting blame for ' + ExtractFileName(AFileName));
+  {$ENDIF}
 
   LKey := LowerCase(AFileName);
 
@@ -382,6 +408,16 @@ begin
   Initialize(ANewProjectPath);
 end;
 
+procedure TBlameEngine.UnregisterThread(const AKey: string);
+begin
+  FLock.Enter;
+  try
+    FActiveThreads.Remove(AKey);
+  finally
+    FLock.Leave;
+  end;
+end;
+
 procedure TBlameEngine.HandleBlameComplete(const AFileName: string; AData: TBlameData);
 var
   LKey: string;
@@ -389,9 +425,13 @@ var
 begin
   LKey := LowerCase(AFileName);
 
+  {$IFDEF DEBUG}
+  LogToIDE('DX.Blame: blame complete for ' + ExtractFileName(AFileName) +
+    ' (' + IntToStr(Length(AData.Lines)) + ' lines)');
+  {$ENDIF}
+
   FLock.Enter;
   try
-    FActiveThreads.Remove(LKey);
     FRetryFailed.Remove(LKey);
   finally
     FLock.Leave;
@@ -413,9 +453,12 @@ var
 begin
   LKey := LowerCase(AFileName);
 
+  {$IFDEF DEBUG}
+  LogToIDE('DX.Blame: blame error for ' + ExtractFileName(AFileName) + ': ' + Copy(AError, 1, 200));
+  {$ENDIF}
+
   FLock.Enter;
   try
-    FActiveThreads.Remove(LKey);
     LAlreadyRetried := FRetryFailed.ContainsKey(LKey);
   finally
     FLock.Leave;
@@ -481,9 +524,19 @@ end;
 function TBlameEngine.IsSourceFile(const AFileName: string): Boolean;
 var
   LExt: string;
+  LFileLower: string;
+  LRootLower: string;
 begin
   LExt := LowerCase(ExtractFileExt(AFileName));
   Result := (LExt = '.pas') or (LExt = '.dpr') or (LExt = '.dpk') or (LExt = '.inc');
+
+  // Only blame files inside the repository
+  if Result and (FRepoRoot <> '') then
+  begin
+    LFileLower := LowerCase(AFileName);
+    LRootLower := LowerCase(IncludeTrailingPathDelimiter(FRepoRoot));
+    Result := LFileLower.StartsWith(LRootLower);
+  end;
 end;
 
 procedure TBlameEngine.CancelAllThreads;

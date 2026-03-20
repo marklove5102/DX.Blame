@@ -39,7 +39,6 @@ type
     INTACodeEditorEvents370)
   private
     FCurrentLine: Integer;
-    FCurrentLineInitialized: Boolean;
     FCurrentEditor: TWinControl;
   protected
     { INTACodeEditorEvents }
@@ -106,6 +105,19 @@ uses
   DX.Blame.Git.Types,
   DX.Blame.Cache;
 
+{$IFDEF DEBUG}
+var
+  GPaintDebugCount: Integer = 0;
+
+procedure DebugLog(const AMsg: string);
+var
+  LMsgServices: IOTAMessageServices;
+begin
+  if Supports(BorlandIDEServices, IOTAMessageServices, LMsgServices) then
+    LMsgServices.AddTitleMessage(AMsg);
+end;
+{$ENDIF}
+
 var
   GRendererIndex: Integer = -1;
 
@@ -136,9 +148,9 @@ end;
 procedure TDXBlameRenderer.EditorSetCaretPos(const Editor: TWinControl;
   X, Y: Integer);
 begin
-  // Y is 0-based, LogicalLineNum is 1-based
-  FCurrentLine := Y + 1;
-  FCurrentLineInitialized := True;
+  // Y is view-relative (row on screen), NOT a logical line number.
+  // We only use this event to trigger a repaint; the actual logical
+  // caret line is read from EditView.CursorPos.Line in PaintLine.
   FCurrentEditor := Editor;
   InvalidateAllEditors;
 end;
@@ -160,6 +172,17 @@ var
   LSavedBrushStyle: TBrushStyle;
   LAnnotationColor: TColor;
 begin
+  {$IFDEF DEBUG}
+  if GPaintDebugCount < 20 then
+  begin
+    Inc(GPaintDebugCount);
+    DebugLog(Format('DX.Blame.Renderer: PaintLine #%d stage=%d before=%s enabled=%s line=%d curLine=%d',
+      [GPaintDebugCount, Ord(Stage), BoolToStr(BeforeEvent, True),
+       BoolToStr(BlameSettings.Enabled, True),
+       Context.LogicalLineNum, FCurrentLine]));
+  end;
+  {$ENDIF}
+
   if (Stage <> plsEndPaint) or BeforeEvent then
     Exit;
 
@@ -168,13 +191,10 @@ begin
 
   LLogicalLine := Context.LogicalLineNum;
 
-  // On first paint, read the caret position from the edit view since
-  // EditorSetCaretPos may not have fired yet
-  if (not FCurrentLineInitialized) and (Context.EditView <> nil) then
-  begin
+  // Always read the logical caret line from the EditView — EditorSetCaretPos
+  // Y is view-relative (screen row), not usable for line matching.
+  if Context.EditView <> nil then
     FCurrentLine := Context.EditView.CursorPos.Line;
-    FCurrentLineInitialized := True;
-  end;
 
   // Display scope check: in current-line mode, only paint the caret line
   if (BlameSettings.DisplayScope = dsCurrentLine) and (LLogicalLine <> FCurrentLine) then
@@ -192,7 +212,16 @@ begin
 
   // Look up blame data from cache
   if not BlameEngine.Cache.TryGet(LFileName, LBlameData) then
+  begin
+    {$IFDEF DEBUG}
+    if GPaintDebugCount < 20 then
+    begin
+      Inc(GPaintDebugCount);
+      DebugLog('DX.Blame.Renderer: cache miss for ' + LFileName);
+    end;
+    {$ENDIF}
     Exit;
+  end;
 
   // Index into Lines array (0-based, LogicalLineNum is 1-based)
   LLineIndex := LLogicalLine - 1;

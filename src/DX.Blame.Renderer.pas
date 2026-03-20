@@ -39,6 +39,7 @@ type
     INTACodeEditorEvents370)
   private
     FCurrentLine: Integer;
+    FCurrentLineInitialized: Boolean;
     FCurrentEditor: TWinControl;
   protected
     { INTACodeEditorEvents }
@@ -112,9 +113,9 @@ var
 
 function TDXBlameRenderer.AllowedEvents: TCodeEditorEvents;
 begin
-  // cevPaintLineEvents for PaintLine; cevKeyboardEvents is not needed because
-  // EditorSetCaretPos is part of INTACodeEditorEvents370 which fires regardless
-  Result := [cevPaintLineEvents];
+  // cevPaintLineEvents for PaintLine; cevKeyboardEvents ensures
+  // EditorSetCaretPos fires on cursor movement
+  Result := [cevPaintLineEvents, cevKeyboardEvents];
 end;
 
 function TDXBlameRenderer.AllowedLineStages: TPaintLineStages;
@@ -135,7 +136,9 @@ end;
 procedure TDXBlameRenderer.EditorSetCaretPos(const Editor: TWinControl;
   X, Y: Integer);
 begin
-  FCurrentLine := Y;
+  // Y is 0-based, LogicalLineNum is 1-based
+  FCurrentLine := Y + 1;
+  FCurrentLineInitialized := True;
   FCurrentEditor := Editor;
   InvalidateAllEditors;
 end;
@@ -164,6 +167,14 @@ begin
     Exit;
 
   LLogicalLine := Context.LogicalLineNum;
+
+  // On first paint, read the caret position from the edit view since
+  // EditorSetCaretPos may not have fired yet
+  if (not FCurrentLineInitialized) and (Context.EditView <> nil) then
+  begin
+    FCurrentLine := Context.EditView.CursorPos.Line;
+    FCurrentLineInitialized := True;
+  end;
 
   // Display scope check: in current-line mode, only paint the caret line
   if (BlameSettings.DisplayScope = dsCurrentLine) and (LLogicalLine <> FCurrentLine) then

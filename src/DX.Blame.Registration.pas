@@ -122,21 +122,29 @@ var
   LNTAServices: INTAServices;
   LToolsMenu: TMenuItem;
   LSubItem: TMenuItem;
+  LComponent: TComponent;
   LCaption: string;
   i: Integer;
 begin
   if not Supports(BorlandIDEServices, INTAServices, LNTAServices) then
     Exit;
 
-  // Find the IDE Tools menu by caption (Name varies across Delphi versions)
+  // Find the IDE Tools menu by internal name first, then fall back to caption
   LToolsMenu := nil;
-  for i := 0 to LNTAServices.MainMenu.Items.Count - 1 do
+  LComponent := LNTAServices.MainMenu.FindComponent('ToolsMenu');
+  if (LComponent <> nil) and (LComponent is TMenuItem) then
+    LToolsMenu := TMenuItem(LComponent);
+
+  if LToolsMenu = nil then
   begin
-    LCaption := StringReplace(LNTAServices.MainMenu.Items[i].Caption, '&', '', [rfReplaceAll]);
-    if SameText(LCaption, 'Tools') then
+    for i := 0 to LNTAServices.MainMenu.Items.Count - 1 do
     begin
-      LToolsMenu := LNTAServices.MainMenu.Items[i];
-      Break;
+      LCaption := StringReplace(LNTAServices.MainMenu.Items[i].Caption, '&', '', [rfReplaceAll]);
+      if SameText(LCaption, 'Tools') then
+      begin
+        LToolsMenu := LNTAServices.MainMenu.Items[i];
+        Break;
+      end;
     end;
   end;
 
@@ -183,6 +191,32 @@ end;
 /// Called by the IDE when the design-time package is loaded.
 /// Registers the wizard, about box entry, and Tools menu items.
 /// </summary>
+/// <summary>
+/// Requests blame for all modules that were already open before the package loaded.
+/// IOTAIDENotifier.FileNotification(ofnFileOpened) does not fire for pre-existing
+/// modules, so we must iterate them manually after initialization.
+/// </summary>
+procedure BlameAlreadyOpenFiles;
+var
+  LModuleServices: IOTAModuleServices;
+  i: Integer;
+  LModule: IOTAModule;
+  LFileName: string;
+begin
+  if not Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
+    Exit;
+
+  for i := 0 to LModuleServices.ModuleCount - 1 do
+  begin
+    LModule := LModuleServices.Modules[i];
+    if LModule = nil then
+      Continue;
+    LFileName := LModule.FileName;
+    if LFileName <> '' then
+      BlameEngine.RequestBlame(LFileName);
+  end;
+end;
+
 procedure Register;
 var
   LWizardServices: IOTAWizardServices;
@@ -229,6 +263,9 @@ begin
 
   // Attach "Previous Revision" item to the editor context menu
   AttachContextMenu;
+
+  // Request blame for files already open before the package loaded
+  BlameAlreadyOpenFiles;
 end;
 
 initialization

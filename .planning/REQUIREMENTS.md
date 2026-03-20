@@ -30,7 +30,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **UX-01**: User kann Blame per Menü-Eintrag ein- und ausschalten
 - [ ] **UX-02**: User kann Blame per konfigurierbarem Hotkey ein- und ausschalten
-- [ ] **UX-03**: User kann zur vorherigen Revision navigieren (Blame auf Parent-Commit)
+- [ ] **UX-03**: User kann zur annotierten Revision navigieren (Datei wird zum Commit geöffnet, den die Annotation anzeigt)
 - [x] **UX-04**: Plugin wird als Design-Time Package (BPL) installiert und unterstützt Delphi 11.3+, 12 und 13
 
 ## v2 Requirements

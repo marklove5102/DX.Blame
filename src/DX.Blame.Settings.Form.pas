@@ -82,7 +82,8 @@ implementation
 {$R *.dfm}
 
 uses
-  DX.Blame.Settings;
+  DX.Blame.Settings,
+  DX.Blame.Renderer;
 
 { TFormDXBlameSettings }
 
@@ -151,7 +152,7 @@ begin
 
   LSettings.Save;
 
-  // TODO: Call InvalidateAllEditors when DX.Blame.Renderer is available (Plan 03-02)
+  InvalidateAllEditors;
 end;
 
 procedure TFormDXBlameSettings.ButtonOKClick(Sender: TObject);

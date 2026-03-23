@@ -58,6 +58,12 @@ type
     [Test]
     procedure TestFormatAbsoluteDate;
     [Test]
+    procedure TestFormatIncludesShortHash;
+    [Test]
+    procedure TestGetAnnotationHashLengthCommitted;
+    [Test]
+    procedure TestGetAnnotationHashLengthUncommitted;
+    [Test]
     procedure TestDeriveColorFallbackIsGray;
     [Test]
     procedure TestDeriveColorRangeForWhiteBg;
@@ -131,6 +137,7 @@ begin
   // Use 95 days ago to guarantee MonthsBetween = 3
   LInfo := MakeLineInfo('John Doe', Now - 95, 'Fix bug');
   LResult := FormatBlameAnnotation(LInfo, FSettings);
+  Assert.IsTrue(LResult.StartsWith('abc1234  '), 'Should start with short hash prefix');
   Assert.Contains(LResult, 'John Doe');
   Assert.Contains(LResult, '3 months ago');
 end;
@@ -194,7 +201,37 @@ begin
   FSettings.DateFormat := dfAbsolute;
   LInfo := MakeLineInfo('Jane', EncodeDate(2025, 6, 15), 'Commit');
   LResult := FormatBlameAnnotation(LInfo, FSettings);
+  Assert.IsTrue(LResult.StartsWith('abc1234  '), 'Should start with short hash prefix');
   Assert.Contains(LResult, '2025-06-15');
+end;
+
+procedure TFormatterTests.TestFormatIncludesShortHash;
+var
+  LInfo: TBlameLineInfo;
+  LResult: string;
+begin
+  LInfo := MakeLineInfo('John Doe', Now - 95, 'Fix bug');
+  LResult := FormatBlameAnnotation(LInfo, FSettings);
+  // Annotation should start with first 7 chars of the commit hash
+  Assert.AreEqual('abc1234', Copy(LResult, 1, 7), 'Should start with 7-char short hash');
+  // Followed by two spaces
+  Assert.AreEqual('  ', Copy(LResult, 8, 2), 'Hash should be followed by two spaces');
+end;
+
+procedure TFormatterTests.TestGetAnnotationHashLengthCommitted;
+var
+  LInfo: TBlameLineInfo;
+begin
+  LInfo := MakeLineInfo('Author', Now, 'Summary');
+  Assert.AreEqual(9, GetAnnotationHashLength(LInfo), 'Committed line hash length should be 9 (7 hash + 2 spaces)');
+end;
+
+procedure TFormatterTests.TestGetAnnotationHashLengthUncommitted;
+var
+  LInfo: TBlameLineInfo;
+begin
+  LInfo := MakeLineInfo('', Now, '', True);
+  Assert.AreEqual(0, GetAnnotationHashLength(LInfo), 'Uncommitted line hash length should be 0');
 end;
 
 procedure TFormatterTests.TestDeriveColorFallbackIsGray;

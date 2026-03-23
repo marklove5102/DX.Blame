@@ -208,6 +208,10 @@ var
   LSavedFontColor: TColor;
   LSavedBrushStyle: TBrushStyle;
   LAnnotationColor: TColor;
+  LHashLen: Integer;
+  LHashText: string;
+  LRestText: string;
+  LHashWidth: Integer;
 begin
   {$IFDEF DEBUG}
   if GPaintDebugCount < 20 then
@@ -311,8 +315,25 @@ begin
     // Transparent background for annotation text
     LCanvas.Brush.Style := bsClear;
 
-    // Draw the annotation
-    LCanvas.TextOut(LAnnotationX, Rect.Top, LText);
+    // Two-part rendering: underlined hash prefix + italic rest
+    LHashLen := GetAnnotationHashLength(LBlameData.Lines[LLineIndex]);
+    if LHashLen > 0 then
+    begin
+      // Draw hash prefix with underline + italic (hotlink style)
+      LHashText := Copy(LText, 1, LHashLen);
+      LRestText := Copy(LText, LHashLen + 1);
+      LCanvas.Font.Style := [fsUnderline, fsItalic];
+      LCanvas.TextOut(LAnnotationX, Rect.Top, LHashText);
+      LHashWidth := LCanvas.TextWidth(LHashText);
+      // Draw remaining text with italic only
+      LCanvas.Font.Style := [fsItalic];
+      LCanvas.TextOut(LAnnotationX + LHashWidth, Rect.Top, LRestText);
+    end
+    else
+    begin
+      // Uncommitted lines: plain italic, no underline
+      LCanvas.TextOut(LAnnotationX, Rect.Top, LText);
+    end;
   finally
     // Restore canvas state
     LCanvas.Font.Style := LSavedFontStyle;

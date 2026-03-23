@@ -49,13 +49,20 @@ procedure RegisterKeyBinding;
 /// <summary>Unregisters the keyboard binding from the IDE.</summary>
 procedure UnregisterKeyBinding;
 
+var
+  /// <summary>
+  /// Callback invoked after blame is toggled via keyboard shortcut.
+  /// Assigned by Registration.pas to wire menu checkmark synchronization
+  /// without creating a circular dependency.
+  /// </summary>
+  OnBlameToggled: TProc;
+
 implementation
 
 uses
   Vcl.Menus,
   DX.Blame.Settings,
-  DX.Blame.Renderer,
-  DX.Blame.Registration;
+  DX.Blame.Renderer;
 
 var
   GKeyBindingIndex: Integer = -1;
@@ -89,7 +96,8 @@ procedure TDXBlameKeyBinding.ToggleBlame(const Context: IOTAKeyContext;
 begin
   BlameSettings.Enabled := not BlameSettings.Enabled;
   BlameSettings.Save;
-  SyncEnableBlameCheckmark;
+  if Assigned(OnBlameToggled) then
+    OnBlameToggled();
   InvalidateAllEditors;
   BindingResult := krHandled;
 end;

@@ -90,4 +90,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Package Foundation | 2/2 | Complete   | 2026-03-19 |
 | 2. Blame Data Pipeline | 3/3 | Complete | 2026-03-19 |
 | 3. Inline Rendering and UX | 3/3 | Complete | 2026-03-23 |
-| 4. Tooltip and Commit Detail | 0/2 | Planning complete | - |
+| 4. Tooltip and Commit Detail | 1/2 | In Progress|  |

@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Tooltip & Detail
 
-- [ ] **TTIP-01**: User sieht bei Hover über die Blame-Annotation einen Tooltip mit Commit-Hash, Autor, Datum und voller Commit-Message
+- [x] **TTIP-01**: User sieht bei Hover über die Blame-Annotation einen Tooltip mit Commit-Hash, Autor, Datum und voller Commit-Message
 - [ ] **TTIP-02**: User kann aus dem Tooltip heraus eine Commit-Detail-Ansicht mit vollem Diff öffnen
 
 ### Konfiguration
@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BLAME-04 | Phase 2 | Complete |
 | BLAME-05 | Phase 2 | Complete |
 | BLAME-06 | Phase 2 | Complete |
-| TTIP-01 | Phase 4 | Pending |
+| TTIP-01 | Phase 4 | Complete |
 | TTIP-02 | Phase 4 | Pending |
 | CONF-01 | Phase 3 | Complete |
 | CONF-02 | Phase 3 | Complete |

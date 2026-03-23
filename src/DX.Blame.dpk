@@ -46,7 +46,7 @@ contains
   DX.Blame.Settings in 'DX.Blame.Settings.pas',
   DX.Blame.Formatter in 'DX.Blame.Formatter.pas',
   DX.Blame.CommitDetail in 'DX.Blame.CommitDetail.pas',
-  DX.Blame.Popup in 'DX.Blame.Popup.pas',
+  DX.Blame.Popup in 'DX.Blame.Popup.pas' {DXBlamePopup},
   DX.Blame.Diff.Form in 'DX.Blame.Diff.Form.pas' {FormDXBlameDiff},
   DX.Blame.Renderer in 'DX.Blame.Renderer.pas',
   DX.Blame.KeyBinding in 'DX.Blame.KeyBinding.pas',

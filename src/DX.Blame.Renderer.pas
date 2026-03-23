@@ -482,7 +482,7 @@ begin
 
   // Create or update popup
   if GPopup = nil then
-    GPopup := TDXBlamePopup.CreateNew(nil);
+    GPopup := TDXBlamePopup.Create(nil);
 
   if GPopup.Visible then
     GPopup.UpdateContent(LBlameData.Lines[LLineIndex], LRepoRoot, LRelPath)

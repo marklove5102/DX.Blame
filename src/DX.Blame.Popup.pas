@@ -4,12 +4,13 @@
 /// </summary>
 ///
 /// <remarks>
-/// TDXBlamePopup is a borderless TCustomForm descendant that shows commit hash,
-/// author, email, date, and full commit message when the user clicks a blame
-/// annotation. The popup dismisses on click-outside (CM_DEACTIVATE) or Escape
-/// key. Clicking a different annotation updates the content in-place without
-/// flicker. The short commit hash is clickable to copy the full SHA to clipboard
-/// with visual feedback. Theme colors adapt to the IDE dark/light setting.
+/// TDXBlamePopup is a borderless form that shows commit hash, author, email,
+/// date, and full commit message when the user clicks a blame annotation.
+/// The popup dismisses on click-outside (CM_DEACTIVATE) or Escape key.
+/// Clicking a different annotation updates the content in-place without
+/// flicker. The short commit hash is clickable to copy the full SHA to
+/// clipboard with visual feedback. Theme colors adapt to the IDE dark/light
+/// setting. Layout is defined in DX.Blame.Popup.dfm for automatic DPI scaling.
 /// </remarks>
 ///
 /// <copyright>
@@ -39,15 +40,18 @@ type
   /// <summary>
   /// Borderless popup form displaying commit information for a blame annotation.
   /// </summary>
-  TDXBlamePopup = class(TCustomForm)
+  TDXBlamePopup = class(TForm)
+    HashLabel: TLabel;
+    AuthorLabel: TLabel;
+    DateLabel: TLabel;
+    LoadingLabel: TLabel;
+    MessageMemo: TMemo;
+    ShowDiffButton: TButton;
+    CopiedTimer: TTimer;
+    procedure DoHashClick(ASender: TObject);
+    procedure DoCopiedTimerTick(ASender: TObject);
+    procedure DoShowDiffClick(ASender: TObject);
   private
-    FHashLabel: TLabel;
-    FAuthorLabel: TLabel;
-    FDateLabel: TLabel;
-    FMessageMemo: TMemo;
-    FShowDiffButton: TButton;
-    FLoadingLabel: TLabel;
-    FCopiedTimer: TTimer;
     FFullHash: string;
     FOriginalHashText: string;
     FOnShowDiffClick: TNotifyEvent;
@@ -55,9 +59,6 @@ type
     FRelativeFilePath: string;
     FLineInfo: TBlameLineInfo;
 
-    procedure DoHashClick(ASender: TObject);
-    procedure DoCopiedTimerTick(ASender: TObject);
-    procedure DoShowDiffClick(ASender: TObject);
     procedure HandleCommitDetailComplete(const ADetail: TCommitDetail);
     procedure ApplyThemeColors;
     function IsDarkTheme: Boolean;
@@ -66,8 +67,6 @@ type
   protected
     procedure CreateParams(var AParams: TCreateParams); override;
   public
-    constructor CreateNew(AOwner: TComponent; ADummy: Integer = 0); override;
-
     /// <summary>
     /// Shows the popup for a commit, populating immediate fields and
     /// launching async fetch for full message.
@@ -88,6 +87,8 @@ type
 
 implementation
 
+{$R *.dfm}
+
 uses
   Vcl.Clipbrd,
   System.Math,
@@ -96,13 +97,6 @@ uses
   DX.Blame.Diff.Form;
 
 const
-  cPopupWidth = 400;
-  cPopupMinHeight = 200;
-  cPopupMaxHeight = 400;
-  cPadding = 10;
-  cMemoMinLines = 4;
-  cCopiedFeedbackMs = 1500;
-
   // Dark theme colors
   cDarkBackground = $002D2D2D;
   cDarkForeground = $00D4D4D4;
@@ -114,79 +108,6 @@ const
   cLightMemoBackground = clWindow;
 
 { TDXBlamePopup }
-
-constructor TDXBlamePopup.CreateNew(AOwner: TComponent; ADummy: Integer);
-begin
-  inherited CreateNew(AOwner, ADummy);
-
-  BorderStyle := bsNone;
-  Width := cPopupWidth;
-  Height := cPopupMinHeight;
-  KeyPreview := True;
-  Position := poDesigned;
-
-  // Hash label -- clickable, styled as link
-  FHashLabel := TLabel.Create(Self);
-  FHashLabel.Parent := Self;
-  FHashLabel.Left := cPadding;
-  FHashLabel.Top := cPadding;
-  FHashLabel.Font.Style := [fsUnderline, fsBold];
-  FHashLabel.Cursor := crHandPoint;
-  FHashLabel.OnClick := DoHashClick;
-
-  // Author label
-  FAuthorLabel := TLabel.Create(Self);
-  FAuthorLabel.Parent := Self;
-  FAuthorLabel.Left := cPadding;
-  FAuthorLabel.Top := FHashLabel.Top + FHashLabel.Height + 6;
-  FAuthorLabel.Width := cPopupWidth - (cPadding * 2);
-  FAuthorLabel.AutoSize := True;
-
-  // Date label
-  FDateLabel := TLabel.Create(Self);
-  FDateLabel.Parent := Self;
-  FDateLabel.Left := cPadding;
-  FDateLabel.Top := FAuthorLabel.Top + FAuthorLabel.Height + 4;
-  FDateLabel.Width := cPopupWidth - (cPadding * 2);
-  FDateLabel.AutoSize := True;
-
-  // Loading label
-  FLoadingLabel := TLabel.Create(Self);
-  FLoadingLabel.Parent := Self;
-  FLoadingLabel.Left := cPadding;
-  FLoadingLabel.Top := FDateLabel.Top + FDateLabel.Height + 8;
-  FLoadingLabel.Caption := 'Loading...';
-  FLoadingLabel.Font.Style := [fsItalic];
-  FLoadingLabel.Visible := False;
-
-  // Message memo -- read-only, multi-line
-  FMessageMemo := TMemo.Create(Self);
-  FMessageMemo.Parent := Self;
-  FMessageMemo.Left := cPadding;
-  FMessageMemo.Top := FDateLabel.Top + FDateLabel.Height + 8;
-  FMessageMemo.Width := cPopupWidth - (cPadding * 2);
-  FMessageMemo.Height := cMemoMinLines * 16;
-  FMessageMemo.ReadOnly := True;
-  FMessageMemo.BorderStyle := bsNone;
-  FMessageMemo.ScrollBars := ssVertical;
-  FMessageMemo.WordWrap := True;
-  FMessageMemo.TabStop := False;
-
-  // Show Diff button
-  FShowDiffButton := TButton.Create(Self);
-  FShowDiffButton.Parent := Self;
-  FShowDiffButton.Caption := 'Show Diff';
-  FShowDiffButton.Width := 90;
-  FShowDiffButton.Left := cPopupWidth - FShowDiffButton.Width - cPadding;
-  FShowDiffButton.Top := FMessageMemo.Top + FMessageMemo.Height + 8;
-  FShowDiffButton.OnClick := DoShowDiffClick;
-
-  // Copied feedback timer
-  FCopiedTimer := TTimer.Create(Self);
-  FCopiedTimer.Enabled := False;
-  FCopiedTimer.Interval := cCopiedFeedbackMs;
-  FCopiedTimer.OnTimer := DoCopiedTimerTick;
-end;
 
 procedure TDXBlamePopup.CreateParams(var AParams: TCreateParams);
 begin
@@ -219,17 +140,16 @@ begin
 
   Clipboard.AsText := FFullHash;
 
-  // Visual feedback: show "Copied!" temporarily
-  FOriginalHashText := FHashLabel.Caption;
-  FHashLabel.Caption := 'Copied!';
-  FCopiedTimer.Enabled := False;
-  FCopiedTimer.Enabled := True;
+  FOriginalHashText := HashLabel.Caption;
+  HashLabel.Caption := 'Copied!';
+  CopiedTimer.Enabled := False;
+  CopiedTimer.Enabled := True;
 end;
 
 procedure TDXBlamePopup.DoCopiedTimerTick(ASender: TObject);
 begin
-  FCopiedTimer.Enabled := False;
-  FHashLabel.Caption := FOriginalHashText;
+  CopiedTimer.Enabled := False;
+  HashLabel.Caption := FOriginalHashText;
 end;
 
 procedure TDXBlamePopup.DoShowDiffClick(ASender: TObject);
@@ -246,17 +166,16 @@ end;
 
 procedure TDXBlamePopup.HandleCommitDetailComplete(const ADetail: TCommitDetail);
 begin
-  FLoadingLabel.Visible := False;
-  FMessageMemo.Visible := True;
+  LoadingLabel.Visible := False;
+  MessageMemo.Visible := True;
 
   if ADetail.Fetched then
   begin
-    FMessageMemo.Text := ADetail.FullMessage;
-    // Cache the detail
+    MessageMemo.Text := ADetail.FullMessage;
     CommitDetailCache.Store(FFullHash, ADetail);
   end
   else
-    FMessageMemo.Text := '(Failed to fetch commit details)';
+    MessageMemo.Text := '(Failed to fetch commit details)';
 end;
 
 procedure TDXBlamePopup.ShowForCommit(const ALineInfo: TBlameLineInfo;
@@ -268,80 +187,75 @@ var
 begin
   ApplyThemeColors;
 
-  // Store context for Show Diff button
   FRepoRoot := ARepoRoot;
   FRelativeFilePath := ARelativeFilePath;
   FLineInfo := ALineInfo;
 
   if ALineInfo.IsUncommitted then
   begin
-    // Simplified display for uncommitted lines
     FFullHash := '';
-    FHashLabel.Caption := '';
-    FHashLabel.Visible := False;
-    FAuthorLabel.Caption := cNotCommittedAuthor;
-    FDateLabel.Caption := '';
-    FDateLabel.Visible := False;
-    FMessageMemo.Text := 'This line has not been committed yet.';
-    FMessageMemo.Visible := True;
-    FLoadingLabel.Visible := False;
-    FShowDiffButton.Visible := False;
+    HashLabel.Caption := '';
+    HashLabel.Visible := False;
+    AuthorLabel.Caption := cNotCommittedAuthor;
+    DateLabel.Caption := '';
+    DateLabel.Visible := False;
+    MessageMemo.Text := 'This line has not been committed yet.';
+    MessageMemo.Visible := True;
+    LoadingLabel.Visible := False;
+    ShowDiffButton.Visible := False;
 
-    // Layout for uncommitted
-    FAuthorLabel.Top := cPadding;
-    FMessageMemo.Top := FAuthorLabel.Top + FAuthorLabel.Height + 8;
-    FMessageMemo.Height := 2 * 16;
-    Height := FMessageMemo.Top + FMessageMemo.Height + cPadding;
+    // Compact layout for uncommitted
+    AuthorLabel.Top := HashLabel.Top;
+    MessageMemo.Top := AuthorLabel.Top + AuthorLabel.Height + 8;
+    MessageMemo.Height := 32;
+    Height := MessageMemo.Top + MessageMemo.Height + 10;
   end
   else
   begin
-    // Full commit display
     FFullHash := ALineInfo.CommitHash;
-    FHashLabel.Caption := Copy(ALineInfo.CommitHash, 1, 7);
-    FHashLabel.Visible := True;
-    FAuthorLabel.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
-    FDateLabel.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
-    FDateLabel.Visible := True;
-    FShowDiffButton.Visible := True;
+    HashLabel.Caption := Copy(ALineInfo.CommitHash, 1, 7);
+    HashLabel.Visible := True;
+    AuthorLabel.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
+    DateLabel.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
+    DateLabel.Visible := True;
+    ShowDiffButton.Visible := True;
 
-    // Recalculate layout
-    FAuthorLabel.Top := FHashLabel.Top + FHashLabel.Height + 6;
-    FDateLabel.Top := FAuthorLabel.Top + FAuthorLabel.Height + 4;
-    FLoadingLabel.Top := FDateLabel.Top + FDateLabel.Height + 8;
-    FMessageMemo.Top := FDateLabel.Top + FDateLabel.Height + 8;
-    FMessageMemo.Height := cMemoMinLines * 16;
+    // Recalculate layout from DFM base positions
+    AuthorLabel.Top := HashLabel.Top + HashLabel.Height + 6;
+    DateLabel.Top := AuthorLabel.Top + AuthorLabel.Height + 4;
+    LoadingLabel.Top := DateLabel.Top + DateLabel.Height + 8;
+    MessageMemo.Top := DateLabel.Top + DateLabel.Height + 8;
+    MessageMemo.Height := 64;
 
-    // Check cache first
     if CommitDetailCache.TryGet(ALineInfo.CommitHash, LDetail) and LDetail.Fetched then
     begin
-      FLoadingLabel.Visible := False;
-      FMessageMemo.Visible := True;
-      FMessageMemo.Text := LDetail.FullMessage;
+      LoadingLabel.Visible := False;
+      MessageMemo.Visible := True;
+      MessageMemo.Text := LDetail.FullMessage;
     end
     else
     begin
-      // Show loading, fetch async
-      FLoadingLabel.Visible := True;
-      FMessageMemo.Visible := False;
-      FMessageMemo.Text := '';
+      LoadingLabel.Visible := True;
+      MessageMemo.Visible := False;
+      MessageMemo.Text := '';
       FetchCommitDetailAsync(ALineInfo.CommitHash, ARepoRoot,
         ARelativeFilePath, HandleCommitDetailComplete);
     end;
 
-    FShowDiffButton.Top := FMessageMemo.Top + FMessageMemo.Height + 8;
-    Height := Min(cPopupMaxHeight,
-      Max(cPopupMinHeight, FShowDiffButton.Top + FShowDiffButton.Height + cPadding));
+    ShowDiffButton.Top := MessageMemo.Top + MessageMemo.Height + 8;
+    Height := Min(400, Max(200,
+      ShowDiffButton.Top + ShowDiffButton.Height + 10));
   end;
 
   // Position popup near click, keeping within screen bounds
   LScreenRect := Screen.MonitorFromPoint(AScreenPos).WorkareaRect;
   LLeft := AScreenPos.X;
-  LTop := AScreenPos.Y + 20; // offset below cursor
+  LTop := AScreenPos.Y + 20;
 
   if LLeft + Width > LScreenRect.Right then
     LLeft := LScreenRect.Right - Width;
   if LTop + Height > LScreenRect.Bottom then
-    LTop := AScreenPos.Y - Height - 4; // show above if not enough room below
+    LTop := AScreenPos.Y - Height - 4;
   if LLeft < LScreenRect.Left then
     LLeft := LScreenRect.Left;
   if LTop < LScreenRect.Top then
@@ -360,7 +274,6 @@ var
 begin
   ApplyThemeColors;
 
-  // Store context for Show Diff button
   FRepoRoot := ARepoRoot;
   FRelativeFilePath := ARelativeFilePath;
   FLineInfo := ALineInfo;
@@ -368,38 +281,37 @@ begin
   if ALineInfo.IsUncommitted then
   begin
     FFullHash := '';
-    FHashLabel.Caption := '';
-    FHashLabel.Visible := False;
-    FAuthorLabel.Caption := cNotCommittedAuthor;
-    FDateLabel.Caption := '';
-    FDateLabel.Visible := False;
-    FMessageMemo.Text := 'This line has not been committed yet.';
-    FMessageMemo.Visible := True;
-    FLoadingLabel.Visible := False;
-    FShowDiffButton.Visible := False;
+    HashLabel.Caption := '';
+    HashLabel.Visible := False;
+    AuthorLabel.Caption := cNotCommittedAuthor;
+    DateLabel.Caption := '';
+    DateLabel.Visible := False;
+    MessageMemo.Text := 'This line has not been committed yet.';
+    MessageMemo.Visible := True;
+    LoadingLabel.Visible := False;
+    ShowDiffButton.Visible := False;
   end
   else
   begin
     FFullHash := ALineInfo.CommitHash;
-    FHashLabel.Caption := Copy(ALineInfo.CommitHash, 1, 7);
-    FHashLabel.Visible := True;
-    FAuthorLabel.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
-    FDateLabel.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
-    FDateLabel.Visible := True;
-    FShowDiffButton.Visible := True;
+    HashLabel.Caption := Copy(ALineInfo.CommitHash, 1, 7);
+    HashLabel.Visible := True;
+    AuthorLabel.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
+    DateLabel.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
+    DateLabel.Visible := True;
+    ShowDiffButton.Visible := True;
 
-    // Check cache first
     if CommitDetailCache.TryGet(ALineInfo.CommitHash, LDetail) and LDetail.Fetched then
     begin
-      FLoadingLabel.Visible := False;
-      FMessageMemo.Visible := True;
-      FMessageMemo.Text := LDetail.FullMessage;
+      LoadingLabel.Visible := False;
+      MessageMemo.Visible := True;
+      MessageMemo.Text := LDetail.FullMessage;
     end
     else
     begin
-      FLoadingLabel.Visible := True;
-      FMessageMemo.Visible := False;
-      FMessageMemo.Text := '';
+      LoadingLabel.Visible := True;
+      MessageMemo.Visible := False;
+      MessageMemo.Text := '';
       FetchCommitDetailAsync(ALineInfo.CommitHash, ARepoRoot,
         ARelativeFilePath, HandleCommitDetailComplete);
     end;
@@ -412,23 +324,23 @@ begin
   begin
     Color := cDarkBackground;
     Font.Color := cDarkForeground;
-    FHashLabel.Font.Color := $00569CD6; // blue-ish link color for dark theme
-    FAuthorLabel.Font.Color := cDarkForeground;
-    FDateLabel.Font.Color := $00808080; // muted gray
-    FMessageMemo.Color := cDarkMemoBackground;
-    FMessageMemo.Font.Color := cDarkForeground;
-    FLoadingLabel.Font.Color := $00808080;
+    HashLabel.Font.Color := $00569CD6;
+    AuthorLabel.Font.Color := cDarkForeground;
+    DateLabel.Font.Color := $00808080;
+    MessageMemo.Color := cDarkMemoBackground;
+    MessageMemo.Font.Color := cDarkForeground;
+    LoadingLabel.Font.Color := $00808080;
   end
   else
   begin
     Color := cLightBackground;
     Font.Color := cLightForeground;
-    FHashLabel.Font.Color := clBlue;
-    FAuthorLabel.Font.Color := cLightForeground;
-    FDateLabel.Font.Color := clGray;
-    FMessageMemo.Color := cLightMemoBackground;
-    FMessageMemo.Font.Color := cLightForeground;
-    FLoadingLabel.Font.Color := clGray;
+    HashLabel.Font.Color := clBlue;
+    AuthorLabel.Font.Color := cLightForeground;
+    DateLabel.Font.Color := clGray;
+    MessageMemo.Color := cLightMemoBackground;
+    MessageMemo.Font.Color := cLightForeground;
+    LoadingLabel.Font.Color := clGray;
   end;
 end;
 

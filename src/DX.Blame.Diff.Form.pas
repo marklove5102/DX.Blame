@@ -8,7 +8,7 @@
 /// and a TRichEdit with color-coded diff lines: green for additions, red for
 /// deletions, blue for hunk headers. Supports toggling between current-file
 /// and full-commit diff scope. Dialog size persists via BlameSettings INI.
-/// GetDiffLineColor is exposed as a unit-level pure function for testability.
+/// Layout is defined in DX.Blame.Diff.Form.dfm for automatic DPI scaling.
 /// </remarks>
 ///
 /// <copyright>
@@ -38,17 +38,17 @@ type
   /// Modal diff dialog showing commit header and color-coded unified diff.
   /// </summary>
   TFormDXBlameDiff = class(TForm)
+    PanelHeader: TPanel;
+    LabelHash: TLabel;
+    LabelAuthor: TLabel;
+    LabelDate: TLabel;
+    MemoMessage: TMemo;
+    PanelToolbar: TPanel;
+    ButtonToggleScope: TButton;
+    LabelLoading: TLabel;
+    RichEditDiff: TRichEdit;
+    procedure DoToggleScopeClick(ASender: TObject);
   private
-    FPanelHeader: TPanel;
-    FLabelHash: TLabel;
-    FLabelAuthor: TLabel;
-    FLabelDate: TLabel;
-    FMemoMessage: TMemo;
-    FPanelToolbar: TPanel;
-    FButtonToggleScope: TButton;
-    FLabelLoading: TLabel;
-    FRichEditDiff: TRichEdit;
-
     FCommitHash: string;
     FRepoRoot: string;
     FRelativeFilePath: string;
@@ -56,7 +56,6 @@ type
     FFileDiff: string;
     FFullDiff: string;
 
-    procedure DoToggleScopeClick(ASender: TObject);
     procedure HandleCommitDetailComplete(const ADetail: TCommitDetail);
     procedure LoadDiffIntoRichEdit(const ADiff: string);
     procedure ApplyThemeColors;
@@ -71,6 +70,8 @@ type
   end;
 
 implementation
+
+{$R *.dfm}
 
 uses
   System.Math,
@@ -91,108 +92,35 @@ var
   LForm: TFormDXBlameDiff;
   LDetail: TCommitDetail;
 begin
-  LForm := TFormDXBlameDiff.CreateNew(nil);
+  LForm := TFormDXBlameDiff.Create(nil);
   try
-    LForm.Caption := 'Commit Diff';
     LForm.Width := BlameSettings.DiffDialogWidth;
     LForm.Height := BlameSettings.DiffDialogHeight;
-    LForm.Position := poScreenCenter;
-    LForm.BorderStyle := bsSizeable;
-    LForm.KeyPreview := True;
 
     LForm.FCommitHash := ACommitHash;
     LForm.FRepoRoot := ARepoRoot;
     LForm.FRelativeFilePath := ARelativeFilePath;
     LForm.FShowingFullDiff := False;
 
-    // Header panel
-    LForm.FPanelHeader := TPanel.Create(LForm);
-    LForm.FPanelHeader.Parent := LForm;
-    LForm.FPanelHeader.Align := alTop;
-    LForm.FPanelHeader.Height := 120;
-    LForm.FPanelHeader.BevelOuter := bvNone;
+    // Populate header labels
+    LForm.LabelHash.Caption := Copy(ACommitHash, 1, 7);
+    LForm.LabelAuthor.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
+    LForm.LabelDate.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
 
-    LForm.FLabelHash := TLabel.Create(LForm);
-    LForm.FLabelHash.Parent := LForm.FPanelHeader;
-    LForm.FLabelHash.Left := 10;
-    LForm.FLabelHash.Top := 8;
-    LForm.FLabelHash.Font.Style := [fsBold];
-    LForm.FLabelHash.Caption := Copy(ACommitHash, 1, 7);
-
-    LForm.FLabelAuthor := TLabel.Create(LForm);
-    LForm.FLabelAuthor.Parent := LForm.FPanelHeader;
-    LForm.FLabelAuthor.Left := 10;
-    LForm.FLabelAuthor.Top := 28;
-    LForm.FLabelAuthor.Caption := ALineInfo.Author + ' <' + ALineInfo.AuthorMail + '>';
-
-    LForm.FLabelDate := TLabel.Create(LForm);
-    LForm.FLabelDate.Parent := LForm.FPanelHeader;
-    LForm.FLabelDate.Left := 10;
-    LForm.FLabelDate.Top := 46;
-    LForm.FLabelDate.Caption := FormatDateTime('yyyy-mm-dd hh:nn:ss', ALineInfo.AuthorTime);
-
-    LForm.FMemoMessage := TMemo.Create(LForm);
-    LForm.FMemoMessage.Parent := LForm.FPanelHeader;
-    LForm.FMemoMessage.Left := 10;
-    LForm.FMemoMessage.Top := 66;
-    LForm.FMemoMessage.Width := LForm.Width - 30;
-    LForm.FMemoMessage.Height := 48;
-    LForm.FMemoMessage.Anchors := [akLeft, akTop, akRight];
-    LForm.FMemoMessage.ReadOnly := True;
-    LForm.FMemoMessage.BorderStyle := bsNone;
-    LForm.FMemoMessage.ScrollBars := ssVertical;
-    LForm.FMemoMessage.WordWrap := True;
-    LForm.FMemoMessage.TabStop := False;
-
-    // Toolbar panel
-    LForm.FPanelToolbar := TPanel.Create(LForm);
-    LForm.FPanelToolbar.Parent := LForm;
-    LForm.FPanelToolbar.Align := alTop;
-    LForm.FPanelToolbar.Height := 30;
-    LForm.FPanelToolbar.BevelOuter := bvNone;
-
-    LForm.FButtonToggleScope := TButton.Create(LForm);
-    LForm.FButtonToggleScope.Parent := LForm.FPanelToolbar;
-    LForm.FButtonToggleScope.Left := 10;
-    LForm.FButtonToggleScope.Top := 3;
-    LForm.FButtonToggleScope.Width := 180;
-    LForm.FButtonToggleScope.Caption := 'Show Full Commit Diff';
-    LForm.FButtonToggleScope.OnClick := LForm.DoToggleScopeClick;
-
-    LForm.FLabelLoading := TLabel.Create(LForm);
-    LForm.FLabelLoading.Parent := LForm.FPanelToolbar;
-    LForm.FLabelLoading.Left := 200;
-    LForm.FLabelLoading.Top := 7;
-    LForm.FLabelLoading.Caption := 'Loading...';
-    LForm.FLabelLoading.Font.Style := [fsItalic];
-    LForm.FLabelLoading.Visible := False;
-
-    // RichEdit for diff display
-    LForm.FRichEditDiff := TRichEdit.Create(LForm);
-    LForm.FRichEditDiff.Parent := LForm;
-    LForm.FRichEditDiff.Align := alClient;
-    LForm.FRichEditDiff.Font.Name := 'Consolas';
-    LForm.FRichEditDiff.Font.Size := 10;
-    LForm.FRichEditDiff.ReadOnly := True;
-    LForm.FRichEditDiff.WordWrap := False;
-    LForm.FRichEditDiff.ScrollBars := ssBoth;
-    LForm.FRichEditDiff.HideSelection := False;
-
-    // Apply theme colors
     LForm.ApplyThemeColors;
 
     // Populate from cache or fetch async
     if CommitDetailCache.TryGet(ACommitHash, LDetail) and LDetail.Fetched then
     begin
-      LForm.FLabelLoading.Visible := False;
-      LForm.FMemoMessage.Text := LDetail.FullMessage;
+      LForm.LabelLoading.Visible := False;
+      LForm.MemoMessage.Text := LDetail.FullMessage;
       LForm.FFileDiff := LDetail.FileDiff;
       LForm.FFullDiff := LDetail.FullDiff;
       LForm.LoadDiffIntoRichEdit(LDetail.FileDiff);
     end
     else
     begin
-      LForm.FLabelLoading.Visible := True;
+      LForm.LabelLoading.Visible := True;
       FetchCommitDetailAsync(ACommitHash, ARepoRoot, ARelativeFilePath,
         LForm.HandleCommitDetailComplete);
     end;
@@ -210,11 +138,11 @@ end;
 
 procedure TFormDXBlameDiff.HandleCommitDetailComplete(const ADetail: TCommitDetail);
 begin
-  FLabelLoading.Visible := False;
+  LabelLoading.Visible := False;
 
   if ADetail.Fetched then
   begin
-    FMemoMessage.Text := ADetail.FullMessage;
+    MemoMessage.Text := ADetail.FullMessage;
     FFileDiff := ADetail.FileDiff;
     FFullDiff := ADetail.FullDiff;
 
@@ -226,7 +154,7 @@ begin
       LoadDiffIntoRichEdit(FFileDiff);
   end
   else
-    FMemoMessage.Text := '(Failed to fetch commit details)';
+    MemoMessage.Text := '(Failed to fetch commit details)';
 end;
 
 procedure TFormDXBlameDiff.DoToggleScopeClick(ASender: TObject);
@@ -237,17 +165,16 @@ begin
 
   if FShowingFullDiff then
   begin
-    FButtonToggleScope.Caption := 'Show Current File Only';
+    ButtonToggleScope.Caption := 'Show Current File Only';
     if FFullDiff <> '' then
       LoadDiffIntoRichEdit(FFullDiff)
     else
     begin
-      // Full diff not yet available, fetch it
-      FLabelLoading.Visible := True;
+      LabelLoading.Visible := True;
       if CommitDetailCache.TryGet(FCommitHash, LDetail) and LDetail.Fetched then
       begin
         FFullDiff := LDetail.FullDiff;
-        FLabelLoading.Visible := False;
+        LabelLoading.Visible := False;
         LoadDiffIntoRichEdit(FFullDiff);
       end
       else
@@ -257,7 +184,7 @@ begin
   end
   else
   begin
-    FButtonToggleScope.Caption := 'Show Full Commit Diff';
+    ButtonToggleScope.Caption := 'Show Full Commit Diff';
     LoadDiffIntoRichEdit(FFileDiff);
   end;
 end;
@@ -277,12 +204,12 @@ begin
   else
     LDefaultColor := clBlack;
 
-  FRichEditDiff.Lines.BeginUpdate;
+  RichEditDiff.Lines.BeginUpdate;
   try
-    FRichEditDiff.Clear;
+    RichEditDiff.Clear;
     if ADiff = '' then
     begin
-      FRichEditDiff.Text := '(No diff available)';
+      RichEditDiff.Text := '(No diff available)';
       Exit;
     end;
 
@@ -296,31 +223,31 @@ begin
       LLine := LLines[i].TrimRight([#13]);
       LColor := GetDiffLineColor(LLine, LDark, LDefaultColor);
 
-      FRichEditDiff.SelStart := FRichEditDiff.GetTextLen;
-      FRichEditDiff.SelLength := 0;
-      FRichEditDiff.SelAttributes.Color := LColor;
+      RichEditDiff.SelStart := RichEditDiff.GetTextLen;
+      RichEditDiff.SelLength := 0;
+      RichEditDiff.SelAttributes.Color := LColor;
 
       if i < LCount - 1 then
-        FRichEditDiff.SelText := LLine + #13#10
+        RichEditDiff.SelText := LLine + #13#10
       else
-        FRichEditDiff.SelText := LLine;
+        RichEditDiff.SelText := LLine;
     end;
 
     if Length(LLines) > cMaxDiffLines then
     begin
-      FRichEditDiff.SelStart := FRichEditDiff.GetTextLen;
-      FRichEditDiff.SelLength := 0;
-      FRichEditDiff.SelAttributes.Color := clYellow;
-      FRichEditDiff.SelText := #13#10 + '[Showing first ' + IntToStr(cMaxDiffLines) + ' lines]';
+      RichEditDiff.SelStart := RichEditDiff.GetTextLen;
+      RichEditDiff.SelLength := 0;
+      RichEditDiff.SelAttributes.Color := clYellow;
+      RichEditDiff.SelText := #13#10 + '[Showing first ' + IntToStr(cMaxDiffLines) + ' lines]';
     end;
   finally
-    FRichEditDiff.Lines.EndUpdate;
+    RichEditDiff.Lines.EndUpdate;
   end;
 
   // Scroll to top
-  FRichEditDiff.SelStart := 0;
-  FRichEditDiff.SelLength := 0;
-  SendMessage(FRichEditDiff.Handle, WM_VSCROLL, SB_TOP, 0);
+  RichEditDiff.SelStart := 0;
+  RichEditDiff.SelLength := 0;
+  SendMessage(RichEditDiff.Handle, WM_VSCROLL, SB_TOP, 0);
 end;
 
 procedure TFormDXBlameDiff.ApplyThemeColors;
@@ -329,33 +256,33 @@ begin
   begin
     Color := $002D2D2D;
     Font.Color := $00D4D4D4;
-    FPanelHeader.Color := $002D2D2D;
-    FPanelHeader.Font.Color := $00D4D4D4;
-    FPanelToolbar.Color := $002D2D2D;
-    FLabelHash.Font.Color := $00569CD6;
-    FLabelAuthor.Font.Color := $00D4D4D4;
-    FLabelDate.Font.Color := $00808080;
-    FMemoMessage.Color := $00252525;
-    FMemoMessage.Font.Color := $00D4D4D4;
-    FLabelLoading.Font.Color := $00808080;
-    FRichEditDiff.Color := $00252525;
-    FRichEditDiff.Font.Color := $00D4D4D4;
+    PanelHeader.Color := $002D2D2D;
+    PanelHeader.Font.Color := $00D4D4D4;
+    PanelToolbar.Color := $002D2D2D;
+    LabelHash.Font.Color := $00569CD6;
+    LabelAuthor.Font.Color := $00D4D4D4;
+    LabelDate.Font.Color := $00808080;
+    MemoMessage.Color := $00252525;
+    MemoMessage.Font.Color := $00D4D4D4;
+    LabelLoading.Font.Color := $00808080;
+    RichEditDiff.Color := $00252525;
+    RichEditDiff.Font.Color := $00D4D4D4;
   end
   else
   begin
     Color := clWindow;
     Font.Color := clWindowText;
-    FPanelHeader.Color := clWindow;
-    FPanelHeader.Font.Color := clWindowText;
-    FPanelToolbar.Color := clWindow;
-    FLabelHash.Font.Color := clNavy;
-    FLabelAuthor.Font.Color := clWindowText;
-    FLabelDate.Font.Color := clGray;
-    FMemoMessage.Color := clWindow;
-    FMemoMessage.Font.Color := clWindowText;
-    FLabelLoading.Font.Color := clGray;
-    FRichEditDiff.Color := clWindow;
-    FRichEditDiff.Font.Color := clWindowText;
+    PanelHeader.Color := clWindow;
+    PanelHeader.Font.Color := clWindowText;
+    PanelToolbar.Color := clWindow;
+    LabelHash.Font.Color := clNavy;
+    LabelAuthor.Font.Color := clWindowText;
+    LabelDate.Font.Color := clGray;
+    MemoMessage.Color := clWindow;
+    MemoMessage.Font.Color := clWindowText;
+    LabelLoading.Font.Color := clGray;
+    RichEditDiff.Color := clWindow;
+    RichEditDiff.Font.Color := clWindowText;
   end;
 end;
 

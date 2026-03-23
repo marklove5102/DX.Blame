@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 5 context gathered
-last_updated: "2026-03-23T11:39:39.625Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-23T12:05:42.285Z"
 last_activity: 2026-03-23 -- Completed 04-02 Modal Diff Dialog
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Der Entwickler sieht auf einen Blick, wer eine Codezeile zuletzt geaendert hat und wann, ohne die IDE verlassen zu muessen.
-**Current focus:** All phases complete -- v1.0 milestone reached
+**Current focus:** All phases complete -- v1.0 milestone reached (including tech debt cleanup)
 
 ## Current Position
 
-Phase: 4 of 4 (Tooltip and Commit Detail)
-Plan: 2 of 2 in current phase
+Phase: 5 of 5 (Tech Debt Cleanup)
+Plan: 1 of 1 in current phase
 Status: Complete
-Last activity: 2026-03-23 -- Completed 04-02 Modal Diff Dialog
+Last activity: 2026-03-23 -- Completed 05-01 Tech Debt Cleanup
 
 Progress: [██████████] 100%
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 | Phase 03 P01 | 8min | 2 tasks | 7 files |
 | Phase 04 P01 | 6min | 2 tasks | 6 files |
 | Phase 04 P02 | 4min | 2 tasks | 13 files |
+| Phase 05 P01 | 2min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,8 @@ Recent decisions affecting current work:
 - 04-02: FormatBlameAnnotation always prefixes 7-char short hash for committed lines, making annotations visually clickable
 - 04-02: Two-part rendering in PaintLine: hash drawn with [fsUnderline, fsItalic], rest with [fsItalic] only
 - 04-02: GetAnnotationHashLength returns 9 for committed (7 hash + 2 spaces), 0 for uncommitted
+- [Phase 05]: Midpoint blend (channel + 128) / 2 for theme-aware annotation color
+- [Phase 05]: OnBlameToggled TProc callback decoupling pattern to break KeyBinding-Registration circular dependency
 
 ### Pending Todos
 
@@ -98,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-23T11:39:39.605Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-tech-debt-cleanup/05-CONTEXT.md
+Last session: 2026-03-23T12:05:42.276Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

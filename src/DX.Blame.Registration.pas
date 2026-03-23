@@ -21,6 +21,9 @@ interface
 
 procedure Register;
 
+/// <summary>Synchronizes the Enable Blame menu checkmark with current state.</summary>
+procedure SyncEnableBlameCheckmark;
+
 implementation
 
 uses
@@ -42,6 +45,7 @@ var
   GWizardIndex: Integer = -1;
   GAboutPluginIndex: Integer = -1;
   GMenuParentItem: TMenuItem = nil;
+  GEnableBlameItem: TMenuItem = nil;
   GMenuHandler: TObject = nil;
 
 type
@@ -93,11 +97,10 @@ end;
 { TDXBlameMenuHandler }
 
 procedure TDXBlameMenuHandler.ToggleBlame(Sender: TObject);
+{$IFDEF DEBUG}
 var
-  LMenuItem: TMenuItem;
-  {$IFDEF DEBUG}
   LMsgServices: IOTAMessageServices;
-  {$ENDIF}
+{$ENDIF}
 begin
   {$IFDEF DEBUG}
   if Supports(BorlandIDEServices, IOTAMessageServices, LMsgServices) then
@@ -106,13 +109,7 @@ begin
 
   BlameSettings.Enabled := not BlameSettings.Enabled;
   BlameSettings.Save;
-
-  if Sender is TMenuItem then
-  begin
-    LMenuItem := TMenuItem(Sender);
-    LMenuItem.Checked := BlameSettings.Enabled;
-  end;
-
+  SyncEnableBlameCheckmark;
   InvalidateAllEditors;
 end;
 
@@ -176,6 +173,7 @@ begin
   LSubItem.Caption := 'Enable Blame';
   LSubItem.Checked := BlameSettings.Enabled;
   LSubItem.OnClick := TDXBlameMenuHandler(GMenuHandler).ToggleBlame;
+  GEnableBlameItem := LSubItem;
   GMenuParentItem.Add(LSubItem);
 
   // Settings... -- opens configuration dialog
@@ -194,8 +192,15 @@ end;
 /// </summary>
 procedure RemoveToolsMenu;
 begin
+  GEnableBlameItem := nil; // owned by GMenuParentItem, freed with it
   FreeAndNil(GMenuParentItem);
   FreeAndNil(GMenuHandler);
+end;
+
+procedure SyncEnableBlameCheckmark;
+begin
+  if GEnableBlameItem <> nil then
+    GEnableBlameItem.Checked := BlameSettings.Enabled;
 end;
 
 /// <summary>

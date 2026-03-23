@@ -54,7 +54,8 @@ implementation
 uses
   Vcl.Menus,
   DX.Blame.Settings,
-  DX.Blame.Renderer;
+  DX.Blame.Renderer,
+  DX.Blame.Registration;
 
 var
   GKeyBindingIndex: Integer = -1;
@@ -88,6 +89,7 @@ procedure TDXBlameKeyBinding.ToggleBlame(const Context: IOTAKeyContext;
 begin
   BlameSettings.Enabled := not BlameSettings.Enabled;
   BlameSettings.Save;
+  SyncEnableBlameCheckmark;
   InvalidateAllEditors;
   BindingResult := krHandled;
 end;

@@ -93,7 +93,10 @@ Plans:
   4. Orphaned OnShowDiffClick property removed from TDXBlamePopup
   5. GetAnnotationClickableLength documentation matches actual behavior (author name span)
   6. TTIP-02 traceability table entry updated from Pending to Complete
-**Plans**: 0 plans
+**Plans**: 1 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Theme-aware color, circular dependency fix, and dead code cleanup
 
 ## Progress
 
@@ -106,4 +109,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Blame Data Pipeline | 3/3 | Complete | 2026-03-19 |
 | 3. Inline Rendering and UX | 3/3 | Complete | 2026-03-23 |
 | 4. Tooltip and Commit Detail | 2/2 | Complete | 2026-03-23 |
-| 5. Tech Debt Cleanup | 0/0 | Planned | — |
+| 5. Tech Debt Cleanup | 0/1 | In Progress | — |

@@ -55,7 +55,10 @@ Plans:
   2. Commit detail popup and diff dialog retrieve data through the provider interface
   3. Revision navigation dispatches through the provider interface
   4. All existing Git blame functionality works unchanged through the abstraction layer
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Refactor Engine and CommitDetail to dispatch through IVCSProvider
+- [ ] 07-02-PLAN.md — Refactor Navigation, Popup, Diff.Form and verify zero Git imports
 
 ### Phase 8: VCS Discovery
 **Goal**: The plugin automatically detects which VCS backend to use for the current project, with user override for dual-VCS repositories
@@ -103,7 +106,7 @@ Plans:
 | 4. Tooltip and Commit Detail | v1.0 | 2/2 | Complete | 2026-03-23 |
 | 5. Tech Debt Cleanup | v1.0 | 1/1 | Complete | 2026-03-23 |
 | 6. VCS Abstraction Foundation | v1.1 | 0/2 | Planned | - |
-| 7. Engine VCS Dispatch | v1.1 | 0/0 | Not started | - |
+| 7. Engine VCS Dispatch | v1.1 | 0/2 | Planned | - |
 | 8. VCS Discovery | v1.1 | 0/0 | Not started | - |
 | 9. Mercurial Provider | v1.1 | 0/0 | Not started | - |
 | 10. Settings and TortoiseHg Integration | v1.1 | 0/0 | Not started | - |

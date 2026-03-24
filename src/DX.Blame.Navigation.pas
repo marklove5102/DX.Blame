@@ -209,7 +209,7 @@ var
   LFileName: string;
   LLineInfo: TBlameLineInfo;
 begin
-  if not BlameEngine.GitAvailable then
+  if not BlameEngine.VCSAvailable then
     Exit;
 
   if not TryGetCurrentLineInfo(LFileName, LLineInfo) then
@@ -249,7 +249,7 @@ begin
   if (Sender is TPopupMenu) then
   begin
     // Determine caption and availability from current line's blame data
-    LAvailable := BlameEngine.GitAvailable and
+    LAvailable := BlameEngine.VCSAvailable and
       TryGetCurrentLineInfo(LFileName, LLineInfo) and
       IsRevisionAvailable(LLineInfo.CommitHash);
 

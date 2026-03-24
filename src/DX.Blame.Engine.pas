@@ -4,9 +4,9 @@
 /// </summary>
 ///
 /// <remarks>
-/// Ties together git discovery, process execution, porcelain parsing, and
-/// caching into a complete async blame lifecycle. TBlameEngine manages
-/// background threads for git blame execution, debounce timers for
+/// Ties together VCS provider dispatch, process execution, porcelain parsing,
+/// and caching into a complete async blame lifecycle. TBlameEngine manages
+/// background threads for blame execution, debounce timers for
 /// save-triggered re-blame, cancellation on file close, retry on transient
 /// errors, and full cleanup on project switch. The singleton BlameEngine
 /// function provides lazy-initialized global access.
@@ -29,22 +29,23 @@ uses
   Vcl.ExtCtrls,
   Winapi.Windows,
   DX.Blame.VCS.Types,
+  DX.Blame.VCS.Provider,
   DX.Blame.Cache;
 
 type
   TBlameThread = class;
 
   /// <summary>
-  /// Central orchestrator tying discovery, process, parser, and cache together.
+  /// Central orchestrator tying VCS provider, process, parser, and cache together.
   /// Manages async blame execution with threading, debounce, cancellation, and retry.
   /// </summary>
   TBlameEngine = class
   private
     FCache: TBlameCache;
-    FGitPath: string;
+    FProvider: IVCSProvider;
     FRepoRoot: string;
-    FGitAvailable: Boolean;
-    FGitNotified: Boolean;
+    FVCSAvailable: Boolean;
+    FVCSNotified: Boolean;
     FActiveThreads: TDictionary<string, TBlameThread>;
     FDebounceTimers: TDictionary<string, TTimer>;
     FRetryFailed: TDictionary<string, Boolean>;
@@ -64,9 +65,9 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    /// <summary>Detects git executable and repository root for the given project path.</summary>
+    /// <summary>Detects VCS executable and repository root for the given project path.</summary>
     procedure Initialize(const AProjectPath: string);
-    /// <summary>Starts an async git blame for the given file.</summary>
+    /// <summary>Starts an async blame for the given file.</summary>
     procedure RequestBlame(const AFileName: string);
     /// <summary>Starts a debounced blame request (used after file save).</summary>
     procedure RequestBlameDebounced(const AFileName: string);
@@ -77,26 +78,29 @@ type
 
     /// <summary>Thread-safe blame data cache.</summary>
     property Cache: TBlameCache read FCache;
-    /// <summary>True if git executable and repository root were found.</summary>
-    property GitAvailable: Boolean read FGitAvailable;
-    /// <summary>Root directory of the current git repository.</summary>
+    /// <summary>True if VCS executable and repository root were found.</summary>
+    property VCSAvailable: Boolean read FVCSAvailable;
+    /// <summary>Root directory of the current repository.</summary>
     property RepoRoot: string read FRepoRoot;
+    /// <summary>The active VCS provider instance.</summary>
+    property Provider: IVCSProvider read FProvider;
   end;
 
   /// <summary>
-  /// Background thread that executes git blame and delivers results via TThread.Queue.
+  /// Background thread that executes blame via VCS provider and delivers results via TThread.Queue.
   /// </summary>
   TBlameThread = class(TThread)
   private
     FFileName: string;
     FRepoRoot: string;
-    FGitPath: string;
+    FProvider: IVCSProvider;
     FProcessHandle: THandle;
     FEngine: TBlameEngine;
   protected
     procedure Execute; override;
   public
-    constructor Create(AEngine: TBlameEngine; const AGitPath, ARepoRoot, AFileName: string);
+    constructor Create(AEngine: TBlameEngine; AProvider: IVCSProvider;
+      const ARepoRoot, AFileName: string);
     procedure Cancel;
   end;
 
@@ -108,9 +112,8 @@ implementation
 uses
   ToolsAPI,
   ToolsAPI.Editor,
-  DX.Blame.Git.Discovery,
-  DX.Blame.Git.Process,
-  DX.Blame.Git.Blame,
+  DX.Blame.VCS.Process,
+  DX.Blame.Git.Provider,
   DX.Blame.CommitDetail;
 
 var
@@ -125,13 +128,13 @@ end;
 
 { TBlameThread }
 
-constructor TBlameThread.Create(AEngine: TBlameEngine;
-  const AGitPath, ARepoRoot, AFileName: string);
+constructor TBlameThread.Create(AEngine: TBlameEngine; AProvider: IVCSProvider;
+  const ARepoRoot, AFileName: string);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FEngine := AEngine;
-  FGitPath := AGitPath;
+  FProvider := AProvider;
   FRepoRoot := ARepoRoot;
   FFileName := AFileName;
   FProcessHandle := 0;
@@ -139,8 +142,6 @@ end;
 
 procedure TBlameThread.Execute;
 var
-  LProcess: TGitProcess;
-  LRelPath: string;
   LOutput: string;
   LExitCode: Integer;
   LLines: TArray<TBlameLineInfo>;
@@ -151,53 +152,44 @@ begin
   LFileName := FFileName;
   LEngine := FEngine;
 
-  LProcess := TGitProcess.Create(FGitPath, FRepoRoot);
-  try
-    LRelPath := ExtractRelativePath(IncludeTrailingPathDelimiter(FRepoRoot), FFileName);
-    LRelPath := StringReplace(LRelPath, '\', '/', [rfReplaceAll]);
+  LExitCode := FProvider.ExecuteBlame(FRepoRoot, FFileName, LOutput, FProcessHandle);
 
-    LExitCode := LProcess.ExecuteAsync(
-      'blame --line-porcelain -- "' + LRelPath + '"', LOutput, FProcessHandle);
+  if Terminated then
+    Exit;
 
-    if Terminated then
-      Exit;
+  if LExitCode = 0 then
+  begin
+    LLines := FProvider.ParseBlameOutput(LOutput);
+    LData := TBlameData.Create(LFileName);
+    LData.Lines := LLines;
+    LData.Timestamp := Now;
 
-    if LExitCode = 0 then
-    begin
-      ParseBlameOutput(LOutput, LLines);
-      LData := TBlameData.Create(LFileName);
-      LData.Lines := LLines;
-      LData.Timestamp := Now;
+    // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
+    LEngine.UnregisterThread(LowerCase(LFileName));
 
-      // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
-      LEngine.UnregisterThread(LowerCase(LFileName));
+    TThread.Queue(nil,
+      procedure
+      begin
+        LEngine.HandleBlameComplete(LFileName, LData);
+      end);
+  end
+  else
+  begin
+    // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
+    LEngine.UnregisterThread(LowerCase(LFileName));
 
-      TThread.Queue(nil,
-        procedure
-        begin
-          LEngine.HandleBlameComplete(LFileName, LData);
-        end);
-    end
-    else
-    begin
-      // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
-      LEngine.UnregisterThread(LowerCase(LFileName));
-
-      TThread.Queue(nil,
-        procedure
-        begin
-          LEngine.HandleBlameError(LFileName, LOutput);
-        end);
-    end;
-  finally
-    LProcess.Free;
+    TThread.Queue(nil,
+      procedure
+      begin
+        LEngine.HandleBlameError(LFileName, LOutput);
+      end);
   end;
 end;
 
 procedure TBlameThread.Cancel;
 begin
   Terminate;
-  TGitProcess.CancelProcess(FProcessHandle);
+  TVCSProcess.CancelProcess(FProcessHandle);
 end;
 
 { TBlameEngine }
@@ -210,8 +202,8 @@ begin
   FDebounceTimers := TDictionary<string, TTimer>.Create;
   FRetryFailed := TDictionary<string, Boolean>.Create;
   FLock := TCriticalSection.Create;
-  FGitAvailable := False;
-  FGitNotified := False;
+  FVCSAvailable := False;
+  FVCSNotified := False;
 end;
 
 destructor TBlameEngine.Destroy;
@@ -227,27 +219,31 @@ begin
 end;
 
 procedure TBlameEngine.Initialize(const AProjectPath: string);
+var
+  LExePath: string;
 begin
-  FGitPath := FindGitExecutable;
-  if FGitPath = '' then
+  FProvider := TGitProvider.Create;
+
+  LExePath := FProvider.FindExecutable;
+  if LExePath = '' then
   begin
-    FGitAvailable := False;
-    if not FGitNotified then
+    FVCSAvailable := False;
+    if not FVCSNotified then
     begin
-      FGitNotified := True;
-      LogToIDE('DX.Blame: git not found on PATH or common locations. Blame features disabled.');
+      FVCSNotified := True;
+      LogToIDE('DX.Blame: VCS executable not found on PATH or common locations. Blame features disabled.');
     end;
     Exit;
   end;
 
-  FRepoRoot := FindGitRepoRoot(AProjectPath);
+  FRepoRoot := FProvider.FindRepoRoot(AProjectPath);
   if FRepoRoot = '' then
   begin
-    FGitAvailable := False;
+    FVCSAvailable := False;
     Exit;
   end;
 
-  FGitAvailable := True;
+  FVCSAvailable := True;
   {$IFDEF DEBUG}
   LogToIDE('DX.Blame: initialized, repo root = ' + FRepoRoot);
   {$ENDIF}
@@ -259,10 +255,10 @@ var
   LThread: TBlameThread;
   LExisting: TBlameThread;
 begin
-  if not FGitAvailable then
+  if not FVCSAvailable then
   begin
     {$IFDEF DEBUG}
-    LogToIDE('DX.Blame: skip blame (git not available) ' + ExtractFileName(AFileName));
+    LogToIDE('DX.Blame: skip blame (VCS not available) ' + ExtractFileName(AFileName));
     {$ENDIF}
     Exit;
   end;
@@ -292,7 +288,7 @@ begin
     FLock.Leave;
   end;
 
-  LThread := TBlameThread.Create(Self, FGitPath, FRepoRoot, AFileName);
+  LThread := TBlameThread.Create(Self, FProvider, FRepoRoot, AFileName);
 
   FLock.Enter;
   try
@@ -309,7 +305,7 @@ var
   LKey: string;
   LTimer: TTimer;
 begin
-  if not FGitAvailable then
+  if not FVCSAvailable then
     Exit;
 
   LKey := LowerCase(AFileName);
@@ -406,7 +402,9 @@ begin
   FCache.Clear;
   CommitDetailCache.Clear;
   FRetryFailed.Clear;
-  ClearDiscoveryCache;
+  if FProvider <> nil then
+    FProvider.ClearDiscoveryCache;
+  FProvider := nil;
   Initialize(ANewProjectPath);
 end;
 
@@ -482,7 +480,7 @@ begin
   end
   else
   begin
-    LogToIDE('DX.Blame: git blame failed for ' + AFileName + ': ' + AError);
+    LogToIDE('DX.Blame: blame failed for ' + AFileName + ': ' + AError);
   end;
 end;
 

@@ -85,7 +85,10 @@ Plans:
   3. User opens the diff dialog and sees RTF color-coded diff for a Mercurial commit
   4. User navigates to the annotated revision via context menu (hg cat retrieves file content)
   5. Mercurial blame uses a dedicated template-based parser, not an adapted Git parser
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Create Hg.Types, Hg.Process, Hg.Blame units (dedicated template-based parser)
+- [ ] 09-02-PLAN.md — Replace THgProvider stubs with real implementations, register units in package
 
 ### Phase 10: Settings and TortoiseHg Integration
 **Goal**: Users can configure VCS preference and launch TortoiseHg directly from the IDE context menu
@@ -111,5 +114,5 @@ Plans:
 | 6. VCS Abstraction Foundation | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 7. Engine VCS Dispatch | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 9. Mercurial Provider | v1.1 | 0/0 | Not started | - |
+| 9. Mercurial Provider | v1.1 | 0/2 | Not started | - |
 | 10. Settings and TortoiseHg Integration | v1.1 | 0/0 | Not started | - |

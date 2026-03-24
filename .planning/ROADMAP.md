@@ -98,7 +98,7 @@ Plans:
   1. User can select Auto / Git / Mercurial as VCS preference in the settings dialog
   2. User can right-click and choose "Open in TortoiseHg Annotate" to launch thg annotate for the current file
   3. User can right-click and choose "Open in TortoiseHg Log" to launch thg log for the current file
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 10-01-PLAN.md — Add VCS preference to settings dialog and wire into VCS discovery
 - [ ] 10-02-PLAN.md — Add TortoiseHg Annotate and Log context menu items
@@ -118,4 +118,4 @@ Plans:
 | 7. Engine VCS Dispatch | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 9. Mercurial Provider | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 10. Settings and TortoiseHg Integration | v1.1 | 0/2 | Not started | - |
+| 10. Settings and TortoiseHg Integration | 1/2 | In Progress|  | - |

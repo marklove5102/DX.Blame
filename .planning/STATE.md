@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Mercurial Support
-status: completed
-stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-24T13:39:42.681Z"
-last_activity: 2026-03-24 — Completed 09-02 THgProvider implementation
+status: in-progress
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-24T19:26:00Z"
+last_activity: 2026-03-24 — Completed 10-02 TortoiseHg context menu integration
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Der Entwickler sieht auf einen Blick, wer eine Codezeile zuletzt geaendert hat und wann, ohne die IDE verlassen zu muessen.
-**Current focus:** v1.1 Mercurial Support — Phase 9 in progress (Mercurial Provider)
+**Current focus:** v1.1 Mercurial Support — Phase 10 in progress (Settings and TortoiseHg Integration)
 
 ## Current Position
 
-Phase: 9 of 10 (Mercurial Provider)
+Phase: 10 of 10 (Settings and TortoiseHg Integration)
 Plan: 2 of 2 complete
 Status: Complete
-Last activity: 2026-03-24 — Completed 09-02 THgProvider implementation
+Last activity: 2026-03-24 — Completed 10-02 TortoiseHg context menu integration
 
 Progress: [██████████] 100%
 
@@ -54,6 +54,8 @@ Progress: [██████████] 100%
 | Phase 08 P02 | 3min | 2 tasks | 4 files |
 | Phase 09 P01 | 4min | 2 tasks | 3 files |
 | Phase 09 P02 | 3min | 2 tasks | 4 files |
+| Phase 10 P01 | 3min | 2 tasks | 3 files |
+| Phase 10 P02 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -78,6 +80,8 @@ v1.1 research completed with HIGH confidence across all areas.
 - [Phase 09]: Positional field extraction via Pos() instead of Split to handle pipes in line content
 - [Phase 09]: Mirrored TGitProvider delegation pattern exactly for THgProvider
 - [Phase 09]: Fixed for-loop variable assignment in Hg.Blame parser for Delphi 13 compilation
+- [Phase 10]: Derive thg.exe from hg.exe path (same directory) rather than separate registry/PATH lookup
+- [Phase 10]: Recreate TortoiseHg menu items on every popup event for correct Git/Hg switching
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:35:30.313Z
-Stopped at: Completed 09-02-PLAN.md
+Last session: 2026-03-24T19:26:00Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None

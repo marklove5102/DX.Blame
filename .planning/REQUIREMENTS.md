@@ -33,7 +33,7 @@ Requirements for Mercurial support milestone. Each maps to roadmap phases.
 
 ### Settings & UI
 
-- [ ] **SETT-01**: User can select VCS preference (Auto/Git/Mercurial) in settings dialog
+- [x] **SETT-01**: User can select VCS preference (Auto/Git/Mercurial) in settings dialog
 - [x] **SETT-02**: User can open current file in TortoiseHg Annotate via context menu
 - [x] **SETT-03**: User can open current file in TortoiseHg Log via context menu
 
@@ -78,7 +78,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VCSD-03 | Phase 8 | Complete |
 | VCSD-04 | Phase 8 | Complete |
 | VCSD-05 | Phase 8 | Complete |
-| SETT-01 | Phase 10 | Pending |
+| SETT-01 | Phase 10 | Complete |
 | SETT-02 | Phase 10 | Complete |
 | SETT-03 | Phase 10 | Complete |
 

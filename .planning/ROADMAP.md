@@ -28,7 +28,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [ ] **Phase 7: Engine VCS Dispatch** - Engine and commit detail units dispatch through IVCSProvider instead of direct Git calls
 - [ ] **Phase 8: VCS Discovery** - Auto-detection of .git/.hg, hg.exe discovery, dual-VCS conflict resolution with per-project persistence
 - [x] **Phase 9: Mercurial Provider** - Full Mercurial blame, commit details, diff, and revision navigation at Git feature parity (completed 2026-03-24)
-- [ ] **Phase 10: Settings and TortoiseHg Integration** - VCS preference in settings dialog, TortoiseHg context menu actions
+- [x] **Phase 10: Settings and TortoiseHg Integration** - VCS preference in settings dialog, TortoiseHg context menu actions (completed 2026-03-24)
 
 ## Phase Details
 
@@ -98,7 +98,7 @@ Plans:
   1. User can select Auto / Git / Mercurial as VCS preference in the settings dialog
   2. User can right-click and choose "Open in TortoiseHg Annotate" to launch thg annotate for the current file
   3. User can right-click and choose "Open in TortoiseHg Log" to launch thg log for the current file
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 10-01-PLAN.md — Add VCS preference to settings dialog and wire into VCS discovery
 - [ ] 10-02-PLAN.md — Add TortoiseHg Annotate and Log context menu items
@@ -118,4 +118,4 @@ Plans:
 | 7. Engine VCS Dispatch | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 9. Mercurial Provider | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 10. Settings and TortoiseHg Integration | 1/2 | In Progress|  | - |
+| 10. Settings and TortoiseHg Integration | 2/2 | Complete   | 2026-03-24 | - |

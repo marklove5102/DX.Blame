@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Mercurial Support
 status: completed
 stopped_at: Completed 09-02-PLAN.md
-last_updated: "2026-03-24T13:35:30.358Z"
+last_updated: "2026-03-24T13:39:42.681Z"
 last_activity: 2026-03-24 — Completed 09-02 THgProvider implementation
 progress:
   total_phases: 5

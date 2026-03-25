@@ -399,6 +399,7 @@ begin
   // Clear both discovery caches to ensure fresh detection on project switch
   DX.Blame.Git.Discovery.ClearDiscoveryCache;
   DX.Blame.Hg.Discovery.ClearHgDiscoveryCache;
+  FVCSNotified := False;
   Initialize(ANewProjectPath);
 end;
 

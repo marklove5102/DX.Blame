@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 DX.Blame: Inline Git Blame for Delphi IDE** — Phases 1-5 (shipped 2026-03-23)
-- **v1.1 Mercurial Support** — Phases 6-10 (in progress)
+- **v1.1 Mercurial Support** — Phases 6-11 (in progress)
 
 ## Phases
 
@@ -29,6 +29,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [ ] **Phase 8: VCS Discovery** - Auto-detection of .git/.hg, hg.exe discovery, dual-VCS conflict resolution with per-project persistence
 - [x] **Phase 9: Mercurial Provider** - Full Mercurial blame, commit details, diff, and revision navigation at Git feature parity (completed 2026-03-24)
 - [x] **Phase 10: Settings and TortoiseHg Integration** - VCS preference in settings dialog, TortoiseHg context menu actions (completed 2026-03-24)
+- [ ] **Phase 11: Engine Project-Switch Lifecycle Fix** - Fix retry timer leak and VCS notification flag reset on project switch (gap closure)
 
 ## Phase Details
 
@@ -103,9 +104,19 @@ Plans:
 - [ ] 10-01-PLAN.md — Add VCS preference to settings dialog and wire into VCS discovery
 - [ ] 10-02-PLAN.md — Add TortoiseHg Annotate and Log context menu items
 
+### Phase 11: Engine Project-Switch Lifecycle Fix
+**Goal**: Retry timers and VCS notification state are correctly managed across project switches, preventing stale blame requests and suppressed diagnostics
+**Depends on**: Phase 10
+**Requirements**: VCSA-05, VCSD-05
+**Gap Closure**: Closes MISS-1 and MISS-2 from v1.1 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Retry timers created by HandleBlameError are cancelled when ClearAllTimers runs during project switch
+  2. FVCSNotified is reset to False on OnProjectSwitch so each project gets its own diagnostic message
+**Plans:** 0/1
+
 ## Progress
 
-**Execution Order:** Phases 6 through 10, sequential.
+**Execution Order:** Phases 6 through 11, sequential.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -118,4 +129,5 @@ Plans:
 | 7. Engine VCS Dispatch | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 9. Mercurial Provider | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 10. Settings and TortoiseHg Integration | 2/2 | Complete    | 2026-03-24 | - |
+| 10. Settings and TortoiseHg Integration | v1.1 | 2/2 | Complete | 2026-03-24 |
+| 11. Engine Project-Switch Lifecycle Fix | v1.1 | 0/1 | Pending | - |

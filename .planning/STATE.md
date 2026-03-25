@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Mercurial Support
 status: completed
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-24T19:39:13.527Z"
-last_activity: 2026-03-24 — Completed 10-02 TortoiseHg context menu integration
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-25T22:13:06.245Z"
+last_activity: 2026-03-25 — Completed 11-01 Engine project-switch lifecycle fix
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 11
+  completed_plans: 11
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** Der Entwickler sieht auf einen Blick, wer eine Codezeile zuletzt geaendert hat und wann, ohne die IDE verlassen zu muessen.
-**Current focus:** v1.1 Mercurial Support — Phase 10 in progress (Settings and TortoiseHg Integration)
+**Current focus:** v1.1 Mercurial Support — Phase 11 complete (Engine Project-Switch Lifecycle Fix)
 
 ## Current Position
 
-Phase: 10 of 10 (Settings and TortoiseHg Integration)
-Plan: 2 of 2 complete
+Phase: 11 of 11 (Engine Project-Switch Lifecycle Fix)
+Plan: 1 of 1 complete
 Status: Complete
-Last activity: 2026-03-24 — Completed 10-02 TortoiseHg context menu integration
+Last activity: 2026-03-25 — Completed 11-01 Engine project-switch lifecycle fix
 
 Progress: [██████████] 100%
 
@@ -57,6 +57,7 @@ Progress: [██████████] 100%
 | Phase 10 P01 | 3min | 2 tasks | 3 files |
 | Phase 10 P02 | 3min | 2 tasks | 2 files |
 | Phase 10 P01 | 4min | 2 tasks | 4 files |
+| Phase 11 P01 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,7 @@ v1.1 research completed with HIGH confidence across all areas.
 - [Phase 10]: Recreate TortoiseHg menu items on every popup event for correct Git/Hg switching
 - [Phase 10]: Forced VCS preference validates executable and repo root before returning (same safety as auto-detect)
 - [Phase 10]: VCS re-detection only triggers on preference change via IOTAModuleServices active project path
+- [Phase 11]: FRetryTimers follows identical lifecycle pattern to FDebounceTimers for consistency
 
 ### Pending Todos
 
@@ -97,6 +99,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-24T19:28:57.978Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-25T22:13:06.241Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None

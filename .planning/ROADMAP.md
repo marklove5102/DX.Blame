@@ -29,7 +29,7 @@ Full details: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)
 - [ ] **Phase 8: VCS Discovery** - Auto-detection of .git/.hg, hg.exe discovery, dual-VCS conflict resolution with per-project persistence
 - [x] **Phase 9: Mercurial Provider** - Full Mercurial blame, commit details, diff, and revision navigation at Git feature parity (completed 2026-03-24)
 - [x] **Phase 10: Settings and TortoiseHg Integration** - VCS preference in settings dialog, TortoiseHg context menu actions (completed 2026-03-24)
-- [ ] **Phase 11: Engine Project-Switch Lifecycle Fix** - Fix retry timer leak and VCS notification flag reset on project switch (gap closure)
+- [x] **Phase 11: Engine Project-Switch Lifecycle Fix** - Fix retry timer leak and VCS notification flag reset on project switch (gap closure) (completed 2026-03-25)
 
 ## Phase Details
 
@@ -112,7 +112,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Retry timers created by HandleBlameError are cancelled when ClearAllTimers runs during project switch
   2. FVCSNotified is reset to False on OnProjectSwitch so each project gets its own diagnostic message
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 11-01-PLAN.md — Track retry timers in FRetryTimers dictionary and reset FVCSNotified on project switch
 
@@ -132,4 +132,4 @@ Plans:
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 9. Mercurial Provider | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 10. Settings and TortoiseHg Integration | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 11. Engine Project-Switch Lifecycle Fix | v1.1 | 0/1 | Pending | - |
+| 11. Engine Project-Switch Lifecycle Fix | 1/1 | Complete   | 2026-03-25 | - |

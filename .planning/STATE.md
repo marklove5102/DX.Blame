@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Mercurial Support
 status: completed
 stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-25T22:13:06.245Z"
+last_updated: "2026-03-25T22:15:43.227Z"
 last_activity: 2026-03-25 — Completed 11-01 Engine project-switch lifecycle fix
 progress:
   total_phases: 6

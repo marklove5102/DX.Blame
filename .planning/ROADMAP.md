@@ -132,4 +132,4 @@ Plans:
 | 8. VCS Discovery | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 9. Mercurial Provider | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 10. Settings and TortoiseHg Integration | v1.1 | 2/2 | Complete | 2026-03-24 |
-| 11. Engine Project-Switch Lifecycle Fix | 1/1 | Complete   | 2026-03-25 | - |
+| 11. Engine Project-Switch Lifecycle Fix | 1/1 | Complete    | 2026-03-25 | - |

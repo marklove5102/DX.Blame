@@ -40,7 +40,7 @@ Full details: [milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)
 **Milestone Goal:** Improve annotation display flexibility, add statusbar mode, streamline settings into IDE Options, and add context menu toggle.
 
 - [x] **Phase 12: Settings Foundation & Annotation Positioning** - New settings properties and caret-anchored annotation rendering (completed 2026-03-26)
-- [ ] **Phase 13: Statusbar Display & Navigation** - Statusbar blame panel, context menu toggle, and auto-scroll on revision navigation
+- [x] **Phase 13: Statusbar Display & Navigation** - Statusbar blame panel, context menu toggle, and auto-scroll on revision navigation (completed 2026-03-26)
 - [ ] **Phase 14: IDE Options Migration** - Extract settings into TFrame, register as IDE Options page, remove Tools menu
 
 ## Phase Details
@@ -106,5 +106,5 @@ Plans:
 | 10. Settings and TortoiseHg Integration | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 11. Engine Project-Switch Lifecycle Fix | v1.1 | 1/1 | Complete | 2026-03-25 |
 | 12. Settings Foundation & Annotation Positioning | 2/2 | Complete    | 2026-03-26 | - |
-| 13. Statusbar Display & Navigation | 1/2 | In Progress|  | - |
+| 13. Statusbar Display & Navigation | 2/2 | Complete   | 2026-03-26 | - |
 | 14. IDE Options Migration | v1.2 | 0/2 | Not started | - |

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: UX Polish & Settings
-status: completed
-stopped_at: Completed 13-01-PLAN.md (Statusbar blame display)
-last_updated: "2026-03-26T22:09:45.032Z"
-last_activity: "2026-03-26 — Completed plan 13-01: Statusbar blame display"
+status: executing
+stopped_at: Completed 13-02-PLAN.md (Context menu toggle and auto-scroll)
+last_updated: "2026-03-26T22:18:29.022Z"
+last_activity: "2026-03-26 — Completed plan 13-01: Statusbar blame display with GOnCaretMoved callback"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
-  percent: 100
+  completed_plans: 4
+  percent: 75
 ---
 
 # Project State
@@ -69,6 +69,9 @@ All v1.0 and v1.1 decisions validated with outcomes — see PROJECT.md Key Decis
 - [Phase 13-01]: Standalone OnCaretMovedHandler wrapper for GOnCaretMoved — keeps Renderer.pas simple, matches OnBlameToggled pattern
 - [Phase 13-01]: TDXBlameStatusbar owns its own TDXBlamePopup instance — self-contained, no shared GPopup
 - [Phase 13-01]: FreeNotification on host TStatusBar prevents AV when IDE edit window is destroyed
+- [Phase 13-02]: GOnContextMenuToggle callback var in Navigation interface — identical pattern to OnBlameToggled in KeyBinding.pas, assigned in Registration.pas to avoid circular dependency
+- [Phase 13-02]: NavigateToRevision ALineNumber = 0 default param for backward-compatible scroll-to-source-line after OpenFile
+- [Phase 13-02]: DetachContextMenu: removed Assigned(GOriginalOnPopup) guard — nil is a valid restore target (Pitfall 3 fix)
 
 ### Pending Todos
 
@@ -80,6 +83,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-26T22:09:45.017Z
-Stopped at: Completed 13-01-PLAN.md (Statusbar blame display)
+Last session: 2026-03-26T22:18:28.997Z
+Stopped at: Completed 13-02-PLAN.md (Context menu toggle and auto-scroll)
 Resume file: None

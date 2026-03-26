@@ -17,8 +17,8 @@ Requirements for UX Polish & Settings milestone. Each maps to roadmap phases.
 
 ### Navigation
 
-- [ ] **NAV-01**: Editor context menu has "Enable/Disable Blame (Ctrl+Alt+B)" toggle with checkmark
-- [ ] **NAV-02**: Navigating to historical revision scrolls to and centers the source line
+- [x] **NAV-01**: Editor context menu has "Enable/Disable Blame (Ctrl+Alt+B)" toggle with checkmark
+- [x] **NAV-02**: Navigating to historical revision scrolls to and centers the source line
 
 ### Settings
 
@@ -61,8 +61,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISP-03 | Phase 12 | Complete |
 | DISP-04 | Phase 12 | Complete |
 | DISP-05 | Phase 12 | Complete |
-| NAV-01 | Phase 13 | Pending |
-| NAV-02 | Phase 13 | Pending |
+| NAV-01 | Phase 13 | Complete |
+| NAV-02 | Phase 13 | Complete |
 | SETT-01 | Phase 14 | Pending |
 | SETT-02 | Phase 14 | Pending |
 | SETT-03 | Phase 14 | Pending |

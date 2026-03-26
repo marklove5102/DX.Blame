@@ -9,8 +9,8 @@ Requirements for UX Polish & Settings milestone. Each maps to roadmap phases.
 
 ### Display
 
-- [ ] **DISP-01**: Statusbar shows current line's blame info (author, relative time, summary) updating on cursor movement
-- [ ] **DISP-02**: Clicking statusbar blame opens commit detail popup
+- [x] **DISP-01**: Statusbar shows current line's blame info (author, relative time, summary) updating on cursor movement
+- [x] **DISP-02**: Clicking statusbar blame opens commit detail popup
 - [x] **DISP-03**: Annotation X position can be caret-anchored (follows caret column) instead of end-of-line
 - [x] **DISP-04**: In all-lines mode, only the caret line uses caret-anchored positioning
 - [x] **DISP-05**: Inline and statusbar display modes are independently toggleable
@@ -56,8 +56,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | Phase 13 | Pending |
-| DISP-02 | Phase 13 | Pending |
+| DISP-01 | Phase 13 | Complete |
+| DISP-02 | Phase 13 | Complete |
 | DISP-03 | Phase 12 | Complete |
 | DISP-04 | Phase 12 | Complete |
 | DISP-05 | Phase 12 | Complete |

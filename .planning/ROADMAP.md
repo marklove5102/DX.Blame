@@ -106,5 +106,5 @@ Plans:
 | 10. Settings and TortoiseHg Integration | v1.1 | 2/2 | Complete | 2026-03-24 |
 | 11. Engine Project-Switch Lifecycle Fix | v1.1 | 1/1 | Complete | 2026-03-25 |
 | 12. Settings Foundation & Annotation Positioning | 2/2 | Complete    | 2026-03-26 | - |
-| 13. Statusbar Display & Navigation | v1.2 | 0/2 | Not started | - |
+| 13. Statusbar Display & Navigation | 1/2 | In Progress|  | - |
 | 14. IDE Options Migration | v1.2 | 0/2 | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: UX Polish & Settings
 status: completed
-stopped_at: Completed 12-02-PLAN.md (ShowInline display toggle)
-last_updated: "2026-03-26T18:58:51.767Z"
-last_activity: "2026-03-26 — Completed plan 12-02: ShowInline display toggle"
+stopped_at: Completed 13-01-PLAN.md (Statusbar blame display)
+last_updated: "2026-03-26T22:09:45.032Z"
+last_activity: "2026-03-26 — Completed plan 13-01: Statusbar blame display"
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Der Entwickler sieht auf einen Blick, wer eine Codezeile zuletzt geaendert hat und wann, ohne die IDE verlassen zu muessen.
-**Current focus:** v1.2 Phase 12 complete — annotation positioning and ShowInline toggle shipped
+**Current focus:** v1.2 Phase 13 in progress — statusbar blame display shipped (plan 1 of 2)
 
 ## Current Position
 
-Phase: 12 of 14 (Settings Foundation & Annotation Positioning)
-Plan: 2 of 2 in current phase — PHASE COMPLETE
-Status: Complete
-Last activity: 2026-03-26 — Completed plan 12-02: ShowInline display toggle
+Phase: 13 of 14 (Statusbar Display & Navigation)
+Plan: 1 of 2 in current phase — plan 1 complete
+Status: In Progress
+Last activity: 2026-03-26 — Completed plan 13-01: Statusbar blame display with GOnCaretMoved callback
 
-Progress: [██████████] 100%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -49,6 +49,11 @@ Progress: [██████████] 100%
 - Tasks: 2
 - Files modified: 4
 
+**v1.2 Phase 13-01:**
+- Duration: 7 min
+- Tasks: 1
+- Files modified: 8
+
 ## Accumulated Context
 
 ### Decisions
@@ -61,6 +66,9 @@ All v1.0 and v1.1 decisions validated with outcomes — see PROJECT.md Key Decis
 - Separate [Display] INI section used (not [General]) to avoid key conflicts with DisplayScope
 - [Phase 12]: Two independent Booleans (ShowInline/ShowStatusbar) not a mode enum — orthogonal display axes remain independently toggleable
 - [Phase 12]: ShowInline defaults True for backward compatibility; guard placed before cache lookups per Pitfall 3
+- [Phase 13-01]: Standalone OnCaretMovedHandler wrapper for GOnCaretMoved — keeps Renderer.pas simple, matches OnBlameToggled pattern
+- [Phase 13-01]: TDXBlameStatusbar owns its own TDXBlamePopup instance — self-contained, no shared GPopup
+- [Phase 13-01]: FreeNotification on host TStatusBar prevents AV when IDE edit window is destroyed
 
 ### Pending Todos
 
@@ -68,10 +76,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 13 (Statusbar): Panel lifecycle across editor window create/destroy needs empirical validation during implementation
+- Phase 13-01 (Statusbar): Panel lifecycle across editor window create/destroy implemented via FreeNotification — needs empirical validation in IDE (known limitation: single TopEditWindow only)
 
 ## Session Continuity
 
-Last session: 2026-03-26T18:54:16.755Z
-Stopped at: Completed 12-02-PLAN.md (ShowInline display toggle)
+Last session: 2026-03-26T22:09:45.017Z
+Stopped at: Completed 13-01-PLAN.md (Statusbar blame display)
 Resume file: None

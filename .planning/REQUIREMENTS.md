@@ -56,22 +56,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | — | Pending |
-| DISP-02 | — | Pending |
-| DISP-03 | — | Pending |
-| DISP-04 | — | Pending |
-| DISP-05 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
-| SETT-01 | — | Pending |
-| SETT-02 | — | Pending |
-| SETT-03 | — | Pending |
+| DISP-01 | Phase 13 | Pending |
+| DISP-02 | Phase 13 | Pending |
+| DISP-03 | Phase 12 | Pending |
+| DISP-04 | Phase 12 | Pending |
+| DISP-05 | Phase 12 | Pending |
+| NAV-01 | Phase 13 | Pending |
+| NAV-02 | Phase 13 | Pending |
+| SETT-01 | Phase 14 | Pending |
+| SETT-02 | Phase 14 | Pending |
+| SETT-03 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10
+- Mapped to phases: 10
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after initial definition*
+*Last updated: 2026-03-26 after roadmap creation*

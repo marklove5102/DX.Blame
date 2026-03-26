@@ -1,391 +1,436 @@
 # Architecture Patterns
 
-**Domain:** VCS abstraction layer for Delphi IDE blame plugin (Mercurial integration into existing Git architecture)
-**Researched:** 2026-03-23
+**Domain:** UX Polish & Settings integration for DX.Blame Delphi IDE plugin (v1.2)
+**Researched:** 2026-03-26
 
 ## Recommended Architecture
 
-### Strategy: Interface-Based VCS Provider with Minimal Refactoring
+Five features integrate into the existing 28-unit architecture. Three require new units, all five modify existing units. No new OTA interfaces beyond what Delphi 11+ already provides.
 
-The existing codebase has 18 production units with Git-specific coupling concentrated in 4 units (`DX.Blame.Git.Types`, `DX.Blame.Git.Blame`, `DX.Blame.Git.Process`, `DX.Blame.Git.Discovery`). The remaining 14 units consume Git types but are otherwise VCS-agnostic in their logic. The recommended approach introduces a VCS provider interface that the engine dispatches to, while promoting the existing `TBlameLineInfo` and `TBlameData` to VCS-neutral shared types.
+### Component Map
 
 ```
-                    DX.Blame.VCS.Types (shared data contracts)
-                           |
-                    DX.Blame.VCS.Provider (IVCSProvider interface)
-                         /    \
-        DX.Blame.Git.Provider   DX.Blame.Hg.Provider
-              |                       |
-     DX.Blame.Git.Process     DX.Blame.Hg.Process
-     DX.Blame.Git.Blame       DX.Blame.Hg.Blame
-     DX.Blame.Git.Discovery   DX.Blame.Hg.Discovery
-                         \    /
-                    DX.Blame.VCS.Discovery (auto-detection, .git/.hg)
-                           |
-                    DX.Blame.Engine (dispatches via IVCSProvider)
-                           |
-              [Cache, Renderer, Popup, Diff, Navigation, etc.]
++-------------------+     +---------------------+     +-------------------+
+| DX.Blame          |     | DX.Blame            |     | DX.Blame          |
+| .Settings         |<----| .Settings.Options   |---->| .Settings.Frame   |
+| (singleton, INI)  |     | (INTAAddInOptions)  |     | (TFrame for IDE)  |
++-------------------+     +---------------------+     +-------------------+
+        ^                                                     |
+        |  reads/writes                                       | replaces
+        |                                                     v
++-------------------+     +---------------------+     +-------------------+
+| DX.Blame          |     | DX.Blame            |     | DX.Blame          |
+| .Renderer         |     | .Statusbar          |     | .Settings.Form    |
+| (inline paint)    |     | (statusbar display) |     | (modal dialog)    |
++-------------------+     +---------------------+     | KEEP for fallback |
+        |                         ^                   +-------------------+
+        | uses settings           | uses settings
+        v                         |
++-------------------+     +---------------------+
+| DX.Blame          |     | DX.Blame            |
+| .Navigation       |     | .Registration       |
+| (context menu,    |     | (lifecycle, menu,   |
+|  auto-scroll)     |     |  options reg)       |
++-------------------+     +---------------------+
 ```
 
-### Component Boundaries
+### New Units (3)
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| `DX.Blame.VCS.Types` | VCS-neutral data contracts (`TBlameLineInfo`, `TBlameData`, constants) | All units that currently use `DX.Blame.Git.Types` |
-| `DX.Blame.VCS.Provider` | `IVCSProvider` interface definition | Engine, providers |
-| `DX.Blame.VCS.Discovery` | Auto-detect `.git`/`.hg`, find executables, select provider | Engine |
-| `DX.Blame.Git.Provider` | `IVCSProvider` implementation delegating to Git sub-units | Engine (via interface) |
-| `DX.Blame.Git.Process` | **Unchanged** -- CreateProcess wrapper for `git.exe` | Git.Provider, Git.Discovery |
-| `DX.Blame.Git.Blame` | **Unchanged** -- porcelain parser | Git.Provider |
-| `DX.Blame.Git.Discovery` | **Minor change** -- extract reusable parts to VCS.Discovery | VCS.Discovery |
-| `DX.Blame.Hg.Provider` | `IVCSProvider` implementation delegating to Hg sub-units | Engine (via interface) |
-| `DX.Blame.Hg.Process` | CreateProcess wrapper for `hg.exe` (adapted from Git.Process) | Hg.Provider, Hg.Discovery |
-| `DX.Blame.Hg.Blame` | Parser for `hg annotate --template` output | Hg.Provider |
-| `DX.Blame.Hg.Discovery` | Find `hg.exe` (PATH + common locations) | VCS.Discovery |
-| `DX.Blame.Engine` | **Modified** -- uses `IVCSProvider` instead of direct Git calls | VCS.Provider, Cache |
-| `DX.Blame.Settings` | **Extended** -- VCS preference per project | Settings.Form |
-| `DX.Blame.Cache` | **Unchanged** -- already VCS-agnostic (keyed by file path) | Engine |
-| `DX.Blame.Renderer` | **Minimal change** -- uses renamed from `DX.Blame.Git.Types` to `DX.Blame.VCS.Types` | Engine, Cache, Formatter |
-| `DX.Blame.Formatter` | **Minimal change** -- uses renamed types unit | Renderer, Navigation |
-| `DX.Blame.CommitDetail` | **Modified** -- uses `IVCSProvider` for fetches | Popup, Diff.Form |
-| `DX.Blame.Navigation` | **Modified** -- uses `IVCSProvider` for file-at-revision | Renderer context menu |
-| `DX.Blame.Popup` | **Minimal change** -- uses renamed types unit | Renderer |
-| `DX.Blame.Diff.Form` | **Minimal change** -- uses renamed types unit | Popup |
+| Unit | Type | Responsibility | Depends On |
+|------|------|---------------|------------|
+| `DX.Blame.Settings.Options` | Class (INTAAddInOptions) | Implements INTAAddInOptions to register the options frame with IDE Tools > Options dialog. Bridges between IDE lifecycle and TFrame. | Settings, Settings.Frame, ToolsAPI |
+| `DX.Blame.Settings.Frame` | TFrame | The actual UI for IDE Options page -- identical controls to current Settings.Form but as TFrame, not TForm. LoadFromSettings/SaveToSettings methods. | Settings, Renderer (for InvalidateAllEditors) |
+| `DX.Blame.Statusbar` | Class | Reads blame data for current line and writes to INTAEditWindow.StatusBar. Updates on cursor movement via INTAEditServicesNotifier or timer. | Settings, Engine, Cache, Formatter, VCS.Types, ToolsAPI |
 
-### Data Flow
+### Modified Units (5)
 
-**Initialization (project open / switch):**
-1. `Engine.Initialize(ProjectPath)` calls `VCS.Discovery.DetectVCS(ProjectPath)`
-2. `VCS.Discovery` walks parent dirs for `.git`/`.hg`, checks executable availability
-3. If both found: check `Settings.VCSPreference` for this project; if unset, prompt user
-4. Returns configured `IVCSProvider` instance (or nil if no VCS)
-5. Engine stores provider reference for blame/detail/navigation dispatch
+| Unit | What Changes | Why |
+|------|-------------|-----|
+| `DX.Blame.Settings` | Add 3 new properties: `AnnotationPosition` (enum: apEndOfLine/apCaretColumn), `StatusbarEnabled` (Boolean), `DisplayMode` (enum: dmInline/dmStatusbar/dmBoth). Persist to INI. | All 5 features need settings. Statusbar is independent of inline -- both can run simultaneously. |
+| `DX.Blame.Renderer` | Modify PaintLine X-position calculation to use caret column when `AnnotationPosition = apCaretColumn`. Skip painting when `DisplayMode = dmStatusbar` (statusbar-only mode). | Feature 1 (annotation positioning) and Feature 2 (statusbar mode). |
+| `DX.Blame.Navigation` | Add "Enable Blame (Ctrl+Alt+B)" toggle item to OnEditorPopup. Pass line number through NavigateToRevision and scroll opened temp file to that line. | Feature 3 (context menu toggle) and Feature 4 (auto-scroll). |
+| `DX.Blame.Registration` | Register/unregister INTAAddInOptions via INTAEnvironmentOptionsServices. Register/unregister DX.Blame.Statusbar notifier. Optionally remove Tools > DX Blame menu (or keep as secondary access). | Feature 5 (embedded Options page) and Feature 2 (statusbar lifecycle). |
+| `DX.Blame.dpk` | Add 3 new units to `contains` clause. | Package must list all units. |
 
-**Blame request:**
-1. Engine calls `FProvider.ExecuteBlame(FileName)` -- returns raw output string + exit code
-2. Engine calls `FProvider.ParseBlame(RawOutput)` -- returns `TArray<TBlameLineInfo>`
-3. Engine wraps in `TBlameData`, stores in Cache
-4. Renderer paints from Cache (unchanged logic)
+### Unchanged Units
 
-**Commit detail fetch:**
-1. `CommitDetail` thread calls `FProvider.FetchCommitMessage(Hash)` for full message
-2. Calls `FProvider.FetchFileDiff(Hash, RelPath)` for file-specific diff
-3. Calls `FProvider.FetchFullDiff(Hash)` for full commit diff
-4. All three return strings, parsed identically to current flow
+All VCS units (Git.*, Hg.*, VCS.*), Cache, Engine, Formatter, CommitDetail, Popup, Diff.Form, KeyBinding, IDE.Notifier, Version remain untouched. This milestone is purely UI/UX layer.
 
-**Navigation (file at revision):**
-1. `Navigation` calls `FProvider.GetFileAtRevision(Hash, RelPath)` -- returns file content string
-2. Writes to temp file, opens in IDE (unchanged logic)
+## Feature Integration Details
 
-## IVCSProvider Interface Definition
+### Feature 1: Annotation X Positioning
 
+**What:** Anchor inline annotation to the caret column instead of end-of-line.
+
+**Integration point:** `TDXBlameRenderer.PaintLine` -- the `LAnnotationX` calculation (line ~310 of Renderer.pas).
+
+**Current behavior:**
 ```pascal
-type
-  /// <summary>
-  /// Abstraction for version control system operations.
-  /// Implemented by Git and Mercurial providers.
-  /// </summary>
-  IVCSProvider = interface
-    ['{GUID}']
-    /// <summary>Display name for UI/logging ("Git" or "Mercurial").</summary>
-    function GetDisplayName: string;
-
-    /// <summary>Finds the VCS executable. Returns empty string if not found.</summary>
-    function FindExecutable: string;
-
-    /// <summary>Finds the repository root for the given path. Returns empty string if not a repo.</summary>
-    function FindRepoRoot(const APath: string): string;
-
-    /// <summary>
-    /// Executes blame for a file. Returns exit code.
-    /// AOutput receives raw CLI output. AProcessHandle for cancellation.
-    /// </summary>
-    function ExecuteBlame(const ARepoRoot, AFileName: string;
-      out AOutput: string; var AProcessHandle: THandle): Integer;
-
-    /// <summary>Parses raw blame output into normalized TBlameLineInfo array.</summary>
-    procedure ParseBlame(const AOutput: string; var ALines: TArray<TBlameLineInfo>);
-
-    /// <summary>Fetches full commit message for the given hash/changeset.</summary>
-    function FetchCommitMessage(const ARepoRoot, AHash: string): string;
-
-    /// <summary>Fetches file-specific diff for a commit.</summary>
-    function FetchFileDiff(const ARepoRoot, AHash, ARelPath: string): string;
-
-    /// <summary>Fetches full commit diff.</summary>
-    function FetchFullDiff(const ARepoRoot, AHash: string): string;
-
-    /// <summary>Retrieves file content at a specific revision.</summary>
-    function GetFileAtRevision(const ARepoRoot, AHash, ARelPath: string): string;
-
-    /// <summary>Cancels a running process by handle.</summary>
-    procedure CancelProcess(var AProcessHandle: THandle);
-
-    /// <summary>Clears any cached discovery data (executable path, repo root).</summary>
-    procedure ClearDiscoveryCache;
-  end;
+LAnnotationX := Context.LineState.VisibleTextRect.Right +
+  (Context.CellSize.cx * 3);
 ```
 
-## Mercurial CLI Command Mapping
-
-The following maps each Git command used in v1.0 to its Mercurial equivalent:
-
-| Operation | Git Command (v1.0) | Mercurial Equivalent |
-|-----------|--------------------|-----------------------|
-| Blame | `git blame --line-porcelain -- <file>` | `hg annotate --template "{node}\n{user}\n{date\|hgdate}\n{desc\|firstline}\n{lineno}\n" <file>` |
-| Repo root | `git rev-parse --show-toplevel` | `hg root` |
-| Full commit message | `git log -1 --format=%B <hash>` | `hg log -r <hash> --template "{desc}"` |
-| File diff | `git show <hash> -- <file>` | `hg diff -c <hash> <file>` |
-| Full diff | `git show <hash>` | `hg log -r <hash> -p --template "{desc}\n\n"` or `hg export <hash>` |
-| File at revision | `git show <hash>:<relpath>` | `hg cat -r <hash> <file>` |
-| Executable search | `git.exe` in PATH | `hg.exe` in PATH + common install locations (TortoiseHg) |
-
-### Mercurial Annotate Template Design
-
-The key design decision is the `hg annotate --template` format. Mercurial's template engine allows structured output that is easy to parse:
-
-```
-hg annotate --template "{node|short}\t{user}\t{date|hgdate}\t{desc|firstline}\t{lineno}\t{line}" <file>
-```
-
-However, `{line}` already includes a newline, making tab-delimited per-line parsing straightforward. For maximum reliability (handling tabs in commit messages), use a multi-line format with sentinel separators:
-
-```
-hg annotate --template "{node}\n{user}\n{date|hgdate}\n{desc|firstline}\n" <file>
-```
-
-This outputs a 4-line block per blame line, followed by the source line. The parser reads in fixed-size blocks.
-
-**Important:** Mercurial uses revision-local integer IDs alongside global 40-char node hashes. Always use `{node}` (full hash) for consistency with the existing `TBlameLineInfo.CommitHash` field. The `{date|hgdate}` filter outputs `<unix-timestamp> <tz-offset>`, directly parseable like Git's `author-time`.
-
-### Uncommitted Lines in Mercurial
-
-Mercurial annotate marks working-copy changes differently than Git. Lines from the working directory that are not committed show the parent changeset, not an all-zeros hash. To detect uncommitted changes, either:
-- Use `hg annotate --include-resolve` (not available in all versions)
-- Compare annotate output against `hg status` to detect modified files
-
-For v1.1, the pragmatic approach is to not distinguish uncommitted lines in Mercurial (annotate always shows the last committed state), matching `hg annotate` standard behavior. This is functionally equivalent since the plugin already skips blame when `Buffer.IsModified`.
-
-## Units Classification: New vs Modified vs Unchanged
-
-### New Units (7)
-
-| Unit | Purpose | Depends On |
-|------|---------|-----------|
-| `DX.Blame.VCS.Types` | VCS-neutral `TBlameLineInfo`, `TBlameData`, constants | RTL only |
-| `DX.Blame.VCS.Provider` | `IVCSProvider` interface definition | `DX.Blame.VCS.Types` |
-| `DX.Blame.VCS.Discovery` | Auto-detect VCS, instantiate correct provider | `VCS.Provider`, `Git.Provider`, `Hg.Provider` |
-| `DX.Blame.Hg.Provider` | `IVCSProvider` implementation for Mercurial | `VCS.Provider`, `Hg.Process`, `Hg.Blame`, `Hg.Discovery` |
-| `DX.Blame.Hg.Process` | CreateProcess wrapper for `hg.exe` | RTL, WinAPI |
-| `DX.Blame.Hg.Blame` | Parser for `hg annotate --template` output | `VCS.Types` |
-| `DX.Blame.Hg.Discovery` | Find `hg.exe` on PATH and common locations | RTL |
-
-### Modified Units (7)
-
-| Unit | Change Description | Effort |
-|------|--------------------|--------|
-| `DX.Blame.Engine` | Replace direct `Git.Discovery`/`Git.Process`/`Git.Blame` calls with `IVCSProvider` dispatch. Replace `FGitPath`/`FGitAvailable` with `FProvider: IVCSProvider`/`FVCSAvailable`. | **Medium** -- core refactoring |
-| `DX.Blame.CommitDetail` | Replace `TGitProcess`+`FindGitExecutable` calls with `IVCSProvider` methods | **Medium** -- thread needs provider ref |
-| `DX.Blame.Navigation` | Replace `GetFileAtCommit` (uses `TGitProcess`) with `IVCSProvider.GetFileAtRevision` | **Low** -- single function replacement |
-| `DX.Blame.Settings` | Add `VCSPreference: TDXBlameVCSPreference` (Auto/Git/Mercurial) with INI persistence | **Low** -- add one enum + 2 lines in Load/Save |
-| `DX.Blame.Settings.Form` | Add VCS preference dropdown to settings dialog | **Low** -- one TComboBox |
-| `DX.Blame.Registration` | Update `Initialize` to use VCS discovery; minor log message changes | **Low** -- 3-4 lines |
-| `DX.Blame.Git.Discovery` | Extract `FindGitRepoRoot` directory-walking logic to shared helper; keep Git-specific parts | **Low** -- refactor to delegate |
-
-### Renamed/Moved Type (1 logical change, many files touched)
-
-| Change | Files Affected |
-|--------|---------------|
-| `DX.Blame.Git.Types` renamed to `DX.Blame.VCS.Types` | All 14 units that `use DX.Blame.Git.Types` |
-
-This is a mechanical rename. The types themselves (`TBlameLineInfo`, `TBlameData`, constants) are already VCS-neutral in structure. Only the unit name changes.
-
-### Unchanged Units (7)
-
-| Unit | Why Unchanged |
-|------|--------------|
-| `DX.Blame.Cache` | Already VCS-agnostic (keyed by file path, stores `TBlameData`) |
-| `DX.Blame.Renderer` | Only consumes `TBlameLineInfo` from cache; no VCS calls |
-| `DX.Blame.Popup` | Only displays data from `TBlameLineInfo`; no VCS calls |
-| `DX.Blame.Diff.Form` | Only displays diff strings; no VCS calls |
-| `DX.Blame.KeyBinding` | Toggle logic only; no VCS coupling |
-| `DX.Blame.IDE.Notifier` | Delegates to Engine; no direct VCS calls |
-| `DX.Blame.Version` | Version constants only |
-
-(Note: Popup, Diff.Form, Renderer, Formatter need the `uses` clause updated from `DX.Blame.Git.Types` to `DX.Blame.VCS.Types` -- this is a mechanical rename, not a logic change.)
-
-## Patterns to Follow
-
-### Pattern 1: Provider Factory via Discovery
-
-**What:** A single `DetectVCS` function returns the appropriate `IVCSProvider` based on directory structure and user preference.
-
-**When:** During `Engine.Initialize` and `Engine.OnProjectSwitch`.
-
-**Example:**
+**New behavior (when apCaretColumn):**
 ```pascal
-function DetectVCS(const AProjectPath: string;
-  APreference: TDXBlameVCSPreference): IVCSProvider;
-var
-  LHasGit, LHasHg: Boolean;
+// Compute caret-anchored X: caret column * cell width + gutter offset + padding
+LCaretX := (Context.EditView.CursorPos.Col - 1) * Context.CellSize.cx +
+  Context.LineState.VisibleTextRect.Left;
+LEndOfLineX := Context.LineState.VisibleTextRect.Right +
+  (Context.CellSize.cx * 3);
+// Use caret position, but never earlier than end-of-line
+LAnnotationX := Max(LCaretX + (Context.CellSize.cx * 3), LEndOfLineX);
+```
+
+**Fallback rules:** Use end-of-line when:
+- DisplayScope = dsAllLines (caret anchoring only makes sense for current line)
+- The caret column would place annotation before end-of-line text
+
+**Settings addition:**
+```pascal
+TDXBlameAnnotationPosition = (apEndOfLine, apCaretColumn);
+// Property: AnnotationPosition: TDXBlameAnnotationPosition
+```
+
+**Risk:** LOW -- single calculation change, no new interfaces, no threading.
+
+### Feature 2: Statusbar Display Mode
+
+**What:** Show blame info in the editor window's status bar, independent of inline annotations.
+
+**Integration point:** `INTAEditWindow.StatusBar` provides direct access to the editor window's TStatusBar. This is the per-editor-window status bar (not the main IDE status bar).
+
+**Architecture:**
+
+```
+TDXBlameStatusbar
+  implements INTAEditServicesNotifier (partially)
+  - EditorViewActivated: update status bar for new view
+  - EditorViewModified: update status bar (cursor may have moved)
+
+  uses:
+  - INTAEditorServices.TopEditWindow.StatusBar to get TStatusBar
+  - BlameEngine.Cache to get blame data
+  - Formatter to format annotation text
+  - BlameSettings for enabled/format preferences
+```
+
+**Status bar panel strategy:** Add a custom TStatusPanel to the existing status bar. The IDE status bar already has panels for line/col, insert/overwrite, etc. We append one panel at the end with blame info.
+
+**Alternative considered:** Using INTACustomEditorViewStatusPanel -- rejected because this is for custom editor views (like Design view), not the Code editor. The Code editor already has its own status bar accessible via INTAEditWindow.StatusBar.
+
+**Update trigger:** The status bar needs updating on every cursor movement. Two options:
+
+1. **INTAEditServicesNotifier.EditorViewModified** -- fires on cursor movement and edits. Best option because it is already part of OTA and fires at the right frequency.
+2. **Timer-based polling** -- simpler but wasteful. Reject.
+
+**Independence from inline:** StatusbarEnabled is a separate Boolean, not mutually exclusive with inline. User can have both, either, or neither. This differs from the original feature request which suggested a mode switch -- but independent toggles are more flexible and simpler to implement.
+
+**Cleanup:** Panel must be removed on unload. Store the panel index and remove in finalization.
+
+**Settings additions:**
+```pascal
+FStatusbarEnabled: Boolean;  // default: False
+```
+
+**Risk:** MEDIUM -- accessing IDE status bar at the right lifecycle moment requires care. Panel must survive editor window creation/destruction.
+
+### Feature 3: Context Menu Toggle
+
+**What:** Add "Enable Blame (Ctrl+Alt+B)" item to the editor right-click context menu.
+
+**Integration point:** `TNavigationMenuHandler.OnEditorPopup` in `DX.Blame.Navigation.pas`.
+
+**Implementation:** Add a new TMenuItem with checkmark before the existing "Show revision..." separator:
+
+```
+----- (separator)
+Enable Blame  Ctrl+Alt+B   [checkmark]
+----- (separator)
+Show revision 3 days ago
+Open in TortoiseHg Annotate
+Open in TortoiseHg Log
+```
+
+**Code pattern:** Follows identical dynamic-injection pattern already used for "Show revision":
+```pascal
+// In OnEditorPopup, before existing separator:
+GEnableBlameItem := TMenuItem.Create(nil);
+GEnableBlameItem.Caption := 'Enable Blame'#9'Ctrl+Alt+B';
+GEnableBlameItem.Checked := BlameSettings.Enabled;
+GEnableBlameItem.OnClick := Self.OnToggleBlameClick;
+TPopupMenu(Sender).Items.Add(GEnableBlameItem);
+```
+
+The `#9` (tab character) in the caption is the standard Delphi convention for showing a keyboard shortcut hint right-aligned in a menu item.
+
+**OnToggleBlameClick handler:** Mirrors `TDXBlameMenuHandler.ToggleBlame` from Registration.pas -- toggle `BlameSettings.Enabled`, save, invalidate editors. Also call `SyncEnableBlameCheckmark` via the existing `OnBlameToggled` callback pattern.
+
+**Risk:** LOW -- follows existing pattern exactly, single menu item addition.
+
+### Feature 4: Auto-Scroll Revision to Source Line
+
+**What:** When opening a historical revision via "Show revision...", scroll the temp file to the same line the user was on.
+
+**Integration point:** `NavigateToRevision` in `DX.Blame.Navigation.pas`.
+
+**Current signature:**
+```pascal
+procedure NavigateToRevision(const AFileName: string;
+  const ACommitHash: string; const ARepoRoot: string);
+```
+
+**New signature:**
+```pascal
+procedure NavigateToRevision(const AFileName: string;
+  const ACommitHash: string; const ARepoRoot: string;
+  ALineNumber: Integer = 0);
+```
+
+**Scroll implementation after IOTAActionServices.OpenFile:**
+```pascal
+// After OpenFile, find the opened view and scroll to line
+if ALineNumber > 0 then
 begin
-  Result := nil;
-  LHasGit := DirectoryExists(FindVCSRoot(AProjectPath, '.git'));
-  LHasHg := DirectoryExists(FindVCSRoot(AProjectPath, '.hg'));
-
-  case APreference of
-    vcsAuto:
-      begin
-        if LHasGit and LHasHg then
-          // Both present: prompt user or use last-saved preference
-          Result := PromptVCSChoice(AProjectPath)
-        else if LHasGit then
-          Result := TGitProvider.Create
-        else if LHasHg then
-          Result := THgProvider.Create;
-      end;
-    vcsGit:
-      if LHasGit then Result := TGitProvider.Create;
-    vcsMercurial:
-      if LHasHg then Result := THgProvider.Create;
+  LEditorServices := BorlandIDEServices as IOTAEditorServices;
+  LTopView := LEditorServices.TopView;
+  if LTopView <> nil then
+  begin
+    LEditPos.Col := 1;
+    LEditPos.Line := ALineNumber;
+    LTopView.SetCursorPos(LEditPos);
+    LTopView.Center(ALineNumber, 1);
+    LTopView.Paint;
   end;
 end;
 ```
 
-### Pattern 2: Reuse TGitProcess Pattern for THgProcess
+Key API: `IOTAEditView40.SetCursorPos(EditPos: TOTAEditPos)` positions the cursor. `IOTAEditView.Center(Row, Col)` scrolls the view so the specified position is centered. Verified in ToolsAPI.pas.
 
-**What:** `THgProcess` mirrors `TGitProcess` exactly -- CreateProcess wrapper with pipe capture, sync/async execution, and cancellation.
+**Caller change:** `TNavigationMenuHandler.OnRevisionClick` must pass the current cursor line:
+```pascal
+NavigateToRevision(LFileName, LLineInfo.CommitHash, BlameEngine.RepoRoot,
+  LLineInfo.FinalLine);
+```
 
-**When:** All Mercurial CLI operations.
+**Risk:** LOW -- straightforward OTA API usage. The only subtlety is that OpenFile is synchronous (returns after the file is opened), so TopView should already point to the new file.
+
+### Feature 5: Embedded IDE Options Page
+
+**What:** Replace or supplement the modal Settings dialog with an embedded page in IDE Tools > Options.
+
+**Integration points:**
+
+1. **INTAAddInOptions** (ToolsAPI.pas line 6640) -- interface with 8 methods:
+   - `GetArea: string` -- return `''` to appear under "Third Party"
+   - `GetCaption: string` -- return `'DX Blame'`
+   - `GetFrameClass: TCustomFrameClass` -- return `TFrameDXBlameSettings`
+   - `FrameCreated(AFrame: TCustomFrame)` -- call LoadFromSettings on the frame
+   - `DialogClosed(Accepted: Boolean)` -- if Accepted, call SaveToSettings
+   - `ValidateContents: Boolean` -- validate input, return True if OK
+   - `GetHelpContext: Integer` -- return 0 (no help)
+   - `IncludeInIDEInsight: Boolean` -- return True (searchable in IDE Insight)
+
+2. **INTAEnvironmentOptionsServices** -- registration/unregistration:
+   - `RegisterAddInOptions(const AddInOptions: INTAAddInOptions)`
+   - `UnregisterAddInOptions(const AddInOptions: INTAAddInOptions)`
+
+**Unit structure:**
+
+**DX.Blame.Settings.Frame** (new TFrame unit):
+- Contains all UI controls currently in TFormDXBlameSettings
+- Same GroupBoxes, controls, and layout
+- Public methods: `LoadFromSettings`, `SaveToSettings`, `ValidateSettings: Boolean`
+- No modal logic, no OK/Cancel buttons (IDE provides those)
+- Does NOT use ToolsAPI -- pure VCL frame
+
+**DX.Blame.Settings.Options** (new class unit):
+- Implements INTAAddInOptions
+- Thin bridge: creates frame, delegates load/save/validate
+- References Settings.Frame for GetFrameClass
+
+**Registration changes:**
+```pascal
+// In Register:
+if Supports(BorlandIDEServices, INTAEnvironmentOptionsServices, LEnvOptSvc) then
+begin
+  GAddInOptions := TDXBlameAddInOptions.Create;
+  LEnvOptSvc.RegisterAddInOptions(GAddInOptions);
+end;
+
+// In finalization (before wizard removal):
+if GAddInOptions <> nil then
+begin
+  if Supports(BorlandIDEServices, INTAEnvironmentOptionsServices, LEnvOptSvc) then
+    LEnvOptSvc.UnregisterAddInOptions(GAddInOptions);
+  GAddInOptions := nil; // prevent double-free -- IDE may release the interface
+end;
+```
+
+**Tools menu decision:** Keep the Tools > DX Blame menu with "Enable Blame" toggle and "Settings..." item. The "Settings..." item now opens `IOTAEnvironmentOptions.EditOptions('', 'DX Blame')` to navigate directly to the embedded options page. This gives users both access paths. Do NOT remove the Tools menu -- it provides quick toggle access.
+
+**Migration from Settings.Form:** Keep `DX.Blame.Settings.Form` in the package but mark it as legacy. The "Settings..." menu item switches from `TFormDXBlameSettings.ShowSettings` to `EditOptions('', 'DX Blame')`. The modal form remains available as fallback.
+
+**Risk:** MEDIUM -- INTAAddInOptions lifecycle (frame creation/destruction timing) is managed by the IDE. Frame must not hold references that outlive it. Settings.Frame must be stateless between showings.
+
+## Patterns to Follow
+
+### Pattern 1: Settings Property + INI Persistence
+
+**What:** Every new setting follows the established pattern in TDXBlameSettings.
+
+**When:** Adding any configurable behavior.
 
 **Example:**
 ```pascal
-type
-  THgProcess = class
-  private
-    FHgPath: string;
-    FWorkDir: string;
-  public
-    constructor Create(const AHgPath, AWorkDir: string);
-    function Execute(const AArgs: string; out AOutput: string): Integer;
-    function ExecuteAsync(const AArgs: string; out AOutput: string;
-      var AProcessHandle: THandle): Integer;
-    class procedure CancelProcess(var AProcessHandle: THandle);
-  end;
+// In TDXBlameSettings:
+private
+  FAnnotationPosition: TDXBlameAnnotationPosition;
+public
+  property AnnotationPosition: TDXBlameAnnotationPosition
+    read FAnnotationPosition write FAnnotationPosition;
+
+// In Load:
+LPosStr := LIni.ReadString('Display', 'AnnotationPosition', 'EndOfLine');
+if SameText(LPosStr, 'CaretColumn') then
+  FAnnotationPosition := apCaretColumn
+else
+  FAnnotationPosition := apEndOfLine;
+
+// In Save:
+case FAnnotationPosition of
+  apEndOfLine: LIni.WriteString('Display', 'AnnotationPosition', 'EndOfLine');
+  apCaretColumn: LIni.WriteString('Display', 'AnnotationPosition', 'CaretColumn');
+end;
 ```
 
-The implementation is identical to `TGitProcess` -- only the executable path differs. Consider extracting a shared `TVCSProcess` base class to eliminate duplication (DRY).
+### Pattern 2: Dynamic Context Menu Injection
 
-### Pattern 3: Shared Process Base Class (DRY)
+**What:** Items injected in OnEditorPopup, cleaned up in RemoveOurItems.
 
-**What:** Extract `TGitProcess` logic into `TVCSProcess` base class. Both `TGitProcess` and `THgProcess` become thin wrappers or direct aliases.
+**When:** Adding new context menu items.
 
-**When:** Since the CreateProcess logic is 100% identical (only the executable path differs), this avoids code duplication.
+**Example:** The existing "Show revision..." and TortoiseHg items follow this exactly. The new "Enable Blame" item follows the same pattern with an additional `Checked` property.
+
+### Pattern 3: INTAAddInOptions Bridge
+
+**What:** Thin adapter class implements INTAAddInOptions, delegates to a TFrame.
+
+**When:** Embedding settings in IDE Options.
 
 **Example:**
 ```pascal
-// DX.Blame.VCS.Process
-type
-  TVCSProcess = class
-  private
-    FExePath: string;
-    FWorkDir: string;
-  public
-    constructor Create(const AExePath, AWorkDir: string);
-    function Execute(const AArgs: string; out AOutput: string): Integer;
-    function ExecuteAsync(const AArgs: string; out AOutput: string;
-      var AProcessHandle: THandle): Integer;
-    class procedure CancelProcess(var AProcessHandle: THandle);
-  end;
+TDXBlameAddInOptions = class(TInterfacedObject, INTAAddInOptions)
+private
+  FFrame: TFrameDXBlameSettings;
+public
+  function GetArea: string;           // returns ''
+  function GetCaption: string;        // returns 'DX Blame'
+  function GetFrameClass: TCustomFrameClass;  // returns TFrameDXBlameSettings
+  procedure FrameCreated(AFrame: TCustomFrame);
+  procedure DialogClosed(Accepted: Boolean);
+  function ValidateContents: Boolean;
+  function GetHelpContext: Integer;    // returns 0
+  function IncludeInIDEInsight: Boolean; // returns True
+end;
 ```
-
-Then `TGitProcess = TVCSProcess` (type alias) and `THgProcess = TVCSProcess`. Or keep the concrete classes as thin constructors that pass the executable name.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Dual-Provider Complexity
+### Anti-Pattern 1: Mutually Exclusive Display Modes
 
-**What:** Supporting multiple VCS providers simultaneously for the same project (e.g., blame from Git for file A, Mercurial for file B).
+**What:** Making inline and statusbar mutually exclusive (radio button choice).
 
-**Why bad:** Massively increases complexity. Cache invalidation, discovery, and engine state would need per-file VCS tracking. The v1.0 architecture assumes one engine state per project.
+**Why bad:** Limits flexibility. Users may want both (inline for details, statusbar for quick reference). Increases settings complexity with mode enums.
 
-**Instead:** One provider per project session. User selects when both are present. Switch requires project re-initialization.
+**Instead:** Two independent Booleans: `Enabled` (existing, controls inline) and `StatusbarEnabled` (new, controls statusbar). They are orthogonal.
 
-### Anti-Pattern 2: Abstract Class Hierarchy Instead of Interface
+### Anti-Pattern 2: Frame Holding Persistent State
 
-**What:** Using `TVCSProvider = class(TObject)` with virtual methods instead of `IVCSProvider = interface`.
+**What:** Storing runtime state in TFrameDXBlameSettings that persists across IDE Options dialog openings.
 
-**Why bad:** In Delphi, interfaces provide automatic reference counting, clean separation, and are idiomatic for plugin-style architectures. Abstract classes require manual lifetime management and tighter coupling.
+**Why bad:** The IDE may destroy and recreate the frame at any time. Frame lifetime is not under our control.
 
-**Instead:** Use `IVCSProvider` interface. Provider implementations are classes that implement the interface but are managed via interface references.
+**Instead:** Frame reads from TDXBlameSettings singleton on FrameCreated, writes back on DialogClosed(True). Frame is a pure view -- no persistent state.
 
-### Anti-Pattern 3: Modifying TBlameLineInfo for Mercurial Specifics
+### Anti-Pattern 3: Polling for Status Bar Updates
 
-**What:** Adding Mercurial-specific fields (e.g., `RevisionNumber: Integer`) to `TBlameLineInfo`.
+**What:** Using a TTimer to periodically check cursor position and update the status bar.
 
-**Why bad:** Pollutes the shared type with VCS-specific concerns. The renderer, formatter, popup, and diff form would need to handle fields that may or may not be populated.
+**Why bad:** Wasteful CPU cycles, introduces update latency, adds timer lifecycle management.
 
-**Instead:** `TBlameLineInfo` stays as-is (already contains exactly the fields needed for display). Mercurial provider maps its data into the same fields. Mercurial revision numbers are not needed for display.
+**Instead:** Use INTAEditServicesNotifier.EditorViewModified which fires on every cursor movement and edit. Existing IDE.Notifier already uses this pattern.
 
-### Anti-Pattern 4: Parsing Output in the Engine
+### Anti-Pattern 4: Removing the Tools Menu
 
-**What:** Moving blame parsing logic into `TBlameEngine` with VCS-specific branches.
+**What:** Completely replacing Tools > DX Blame with the IDE Options page.
 
-**Why bad:** Violates SoC. Engine becomes a god class that knows about both Git porcelain format and Mercurial template format.
+**Why bad:** IDE Options requires multiple clicks (Tools > Options > Third Party > DX Blame). The toggle needs to be fast (one click or one keystroke). Power users expect menu-bar access.
 
-**Instead:** Each provider implements `ParseBlame` internally. Engine only calls the interface method.
+**Instead:** Keep Tools menu for quick toggle. Change "Settings..." to open the IDE Options dialog directly at the DX Blame page.
 
-## VCS Auto-Detection Algorithm
+## Data Flow Changes
+
+### Annotation Position Data Flow
 
 ```
-1. Walk parent directories from project path
-2. For each directory, check:
-   a. Does .git/ subdirectory exist?
-   b. Does .hg/ subdirectory exist?
-3. Record first .git root and first .hg root found
-4. Apply preference:
-   - Auto + only one found -> use that one
-   - Auto + both found -> prompt user (with "remember for this project" checkbox)
-   - Explicit Git/Mercurial -> use that if available, else disabled
-5. Verify chosen VCS:
-   - Git: run `git rev-parse --show-toplevel` (existing logic)
-   - Hg: run `hg root` (equivalent verification)
-6. If executable not found -> log warning, disable blame
+TDXBlameSettings.AnnotationPosition
+  --> TDXBlameRenderer.PaintLine
+    --> LAnnotationX calculation branches on setting
+    --> Canvas.TextOut at computed X
 ```
 
-## Suggested Build Order
+No new data structures. Pure branching logic in one method.
 
-The build order respects dependencies and enables incremental testing:
+### Statusbar Data Flow
+
+```
+EditorViewModified/EditorViewActivated (IDE event)
+  --> TDXBlameStatusbar.UpdatePanel
+    --> Read caret line from IOTAEditView.CursorPos.Line
+    --> Read blame data from BlameEngine.Cache.TryGet
+    --> Format via FormatBlameAnnotation
+    --> Write to INTAEditWindow.StatusBar.Panels[N].Text
+```
+
+Uses existing data pipeline (Cache + Formatter). No new data formats.
+
+### Auto-Scroll Data Flow
+
+```
+OnRevisionClick (context menu)
+  --> TryGetCurrentLineInfo (gets FinalLine)
+  --> NavigateToRevision(FileName, Hash, RepoRoot, LineNumber)
+    --> IOTAActionServices.OpenFile (opens temp file)
+    --> IOTAEditView.SetCursorPos (positions cursor)
+    --> IOTAEditView.Center (scrolls view)
+```
+
+Single integer parameter threaded through existing call chain.
+
+## Build Order (Dependency-Driven)
+
+Dependencies flow: Settings --> Frame/Statusbar --> Options --> Registration.
 
 | Phase | Units | Rationale |
 |-------|-------|-----------|
-| **1. Shared types** | Rename `DX.Blame.Git.Types` to `DX.Blame.VCS.Types`; update all `uses` clauses | Foundation -- everything depends on this. Mechanical change, zero logic risk. Must compile cleanly before proceeding. |
-| **2. Process abstraction** | Create `DX.Blame.VCS.Process` (extract from `DX.Blame.Git.Process`); refactor `DX.Blame.Git.Process` to delegate | DRY foundation for both providers. Existing Git tests still pass. |
-| **3. Interface + Git provider** | Create `DX.Blame.VCS.Provider` (interface); create `DX.Blame.Git.Provider` (wraps existing Git units) | Interface exists; Git keeps working through the new interface. No behavior change yet. |
-| **4. Engine refactoring** | Modify `DX.Blame.Engine` to use `IVCSProvider` instead of direct Git calls | Critical refactoring. After this, Git blame works through the interface. Full regression test point. |
-| **5. CommitDetail + Navigation** | Modify `DX.Blame.CommitDetail` and `DX.Blame.Navigation` to use `IVCSProvider` | Complete the VCS abstraction in all units that make CLI calls. |
-| **6. VCS Discovery** | Create `DX.Blame.VCS.Discovery` (auto-detect .git/.hg) | Independent of Hg implementation. Can detect both repos even before Hg provider exists. |
-| **7. Mercurial provider** | Create `DX.Blame.Hg.Discovery`, `DX.Blame.Hg.Process`, `DX.Blame.Hg.Blame`, `DX.Blame.Hg.Provider` | New functionality. All Hg-specific code in one batch. |
-| **8. Settings + UI** | Extend `DX.Blame.Settings` and `DX.Blame.Settings.Form` for VCS preference | Settings depend on discovery knowing about both providers. |
-| **9. Integration** | Wire VCS.Discovery into Engine.Initialize; handle dual-VCS prompt | Final assembly and end-to-end testing. |
+| **1** | `DX.Blame.Settings` (modify) | All features depend on new settings properties. Zero risk, pure data. |
+| **2** | `DX.Blame.Renderer` (modify) | Feature 1 (annotation positioning). Depends on Phase 1 settings. Self-contained in one method. |
+| **3** | `DX.Blame.Navigation` (modify) | Features 3+4 (context menu toggle + auto-scroll). Independent of Phase 2. Depends on Phase 1 settings. |
+| **4** | `DX.Blame.Settings.Frame` (new) | Feature 5 prerequisite. Extract UI from Settings.Form into TFrame. No OTA dependency. |
+| **5** | `DX.Blame.Settings.Options` (new) | Feature 5 INTAAddInOptions adapter. Depends on Phase 4 frame. |
+| **6** | `DX.Blame.Statusbar` (new) | Feature 2. Independent of Phases 4-5. Depends on Phase 1 settings. Separate because it introduces a new OTA notifier. |
+| **7** | `DX.Blame.Registration` (modify) + `DX.Blame.dpk` (modify) | Wire everything: register Options page, register Statusbar notifier, update menu "Settings..." action, add new units to dpk. |
+
+Phases 2, 3, and 6 are independent of each other and could be parallelized. Phase 4 must precede Phase 5. Phase 7 is the integration phase that ties everything together.
 
 ## Scalability Considerations
 
-| Concern | Current (Git only) | After v1.1 (Git + Hg) | Future (SVN etc.) |
-|---------|-------------------|----------------------|-------------------|
-| Adding a VCS | N/A | New provider class + discovery entry | Same pattern -- implement IVCSProvider |
-| Process overhead | One executable type | Two executable types, same CreateProcess wrapper | Same pattern |
-| Cache complexity | Single provider assumed | Single provider per project session | Unchanged |
-| Settings complexity | None | One enum preference + per-project memory | Add enum value |
-| Unit count | 18 units | ~25 units (+7 new) | +4 per new VCS |
+Not applicable for this milestone -- all changes are local to the IDE process with negligible performance impact. The statusbar update fires on cursor movement but performs only a dictionary lookup and string format (sub-millisecond).
 
 ## Sources
 
-- Existing codebase analysis (18 production units in `Y:/DX.Blame/src/`)
-- [Mercurial annotate help](https://www.mercurial-scm.org/repo/hg/help/annotate) -- template keywords, output format
-- [Mercurial template documentation](https://book.mercurial-scm.org/read/template.html) -- `{node}`, `{user}`, `{date|hgdate}`, `{desc|firstline}`
-- [hg root command](https://mercurial-scm.org/help/commands/root) -- repository root detection
-- [hg cat command](https://mercurial-scm.org/help/commands/cat) -- file at revision (`hg cat -r <rev> <file>`)
-- [Replicating git show in Mercurial](https://slaptijack.com/software/git-show-in-hg/) -- `hg diff -c <hash>` for commit diffs, `hg export` for full details
-- [Mercurial hg log](https://www.mercurial-scm.org/help/commands/log.html) -- `hg log -r <hash> --template` for commit messages
-- [Git vs Mercurial command mapping](https://hyperpolyglot.org/version-control) -- comprehensive command equivalence table
+- ToolsAPI.pas (Delphi 13, Studio 37.0) -- INTAAddInOptions interface (line 6640), INTAEditWindow.StatusBar (line 2235), INTAEnvironmentOptionsServices (line 6760), INTACustomEditorViewStatusPanel (line 8020, evaluated and rejected)
+- [IOTAEditView40.SetCursorPos](https://docwiki.embarcadero.com/Libraries/Athens/en/API:ToolsAPI.IOTAEditView40.SetCursorPos) -- cursor positioning API
+- [Embarcadero OTAPI-Docs](https://github.com/Embarcadero/OTAPI-Docs) -- OTA documentation
+- [GExperts OTA FAQ](https://www.gexperts.org/open-tools-api-faq/) -- practical OTA patterns
+- Existing DX.Blame codebase (28 units, v1.1) -- architecture patterns and conventions

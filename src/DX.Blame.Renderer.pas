@@ -236,6 +236,11 @@ begin
   if not BlameSettings.Enabled then
     Exit;
 
+  // Skip inline rendering when inline display is disabled
+  // (blame may still be globally enabled for statusbar display in Phase 13)
+  if not BlameSettings.ShowInline then
+    Exit;
+
   // Store cell height for hit-testing in EditorMouseDown
   GCellHeight := Context.CellSize.cy;
 

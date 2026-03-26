@@ -1,4 +1,4 @@
-/// <summary>
+﻿/// <summary>
 /// DX.Blame.Settings
 /// Singleton settings persistence for DX.Blame configuration.
 /// </summary>
@@ -54,6 +54,7 @@ type
     FDiffDialogHeight: Integer;
     FVCSPreference: TDXBlameVCSPreference;
     FAnnotationPosition: TDXBlameAnnotationPosition;
+    FShowInline: Boolean;
   public
     constructor Create;
 
@@ -82,6 +83,8 @@ type
     property DiffDialogHeight: Integer read FDiffDialogHeight write FDiffDialogHeight;
     property VCSPreference: TDXBlameVCSPreference read FVCSPreference write FVCSPreference;
     property AnnotationPosition: TDXBlameAnnotationPosition read FAnnotationPosition write FAnnotationPosition;
+    /// <summary>When False, PaintLine exits early — inline annotations are suppressed even if blame is globally enabled.</summary>
+    property ShowInline: Boolean read FShowInline write FShowInline;
   end;
 
 /// <summary>Returns the singleton TDXBlameSettings instance (lazy-initialized).</summary>
@@ -122,6 +125,7 @@ begin
   FDiffDialogHeight := 600;
   FVCSPreference := vpAuto;
   FAnnotationPosition := apEndOfLine;
+  FShowInline := True;
   Load;
 end;
 
@@ -186,6 +190,8 @@ begin
       FAnnotationPosition := apCaretColumn
     else
       FAnnotationPosition := apEndOfLine;
+
+    FShowInline := LIni.ReadBool('Display', 'ShowInline', True);
   finally
     LIni.Free;
   end;
@@ -236,6 +242,8 @@ begin
       apEndOfLine:   LIni.WriteString('Display', 'AnnotationPosition', 'EndOfLine');
       apCaretColumn: LIni.WriteString('Display', 'AnnotationPosition', 'CaretColumn');
     end;
+
+    LIni.WriteBool('Display', 'ShowInline', FShowInline);
   finally
     LIni.Free;
   end;

@@ -40,6 +40,7 @@ uses
   DX.Blame.KeyBinding,
   DX.Blame.Settings,
   DX.Blame.Settings.Form,
+  DX.Blame.Settings.Options,
   DX.Blame.Navigation;
 
 var
@@ -49,6 +50,7 @@ var
   GEnableBlameItem: TMenuItem = nil;
   GMenuHandler: TObject = nil;
   GStatusbar: TDXBlameStatusbar = nil;
+  GAddInOptions: INTAAddInOptions = nil;
 
 type
   /// <summary>
@@ -274,6 +276,12 @@ begin
   // Create Tools menu placeholder
   CreateToolsMenu;
 
+  // Register IDE Options page (Tools > Options > Third Party > DX Blame)
+  var LEnvOptSvc: INTAEnvironmentOptionsServices;
+  GAddInOptions := TDXBlameAddInOptions.Create;
+  if Supports(BorlandIDEServices, INTAEnvironmentOptionsServices, LEnvOptSvc) then
+    LEnvOptSvc.RegisterAddInOptions(GAddInOptions);
+
   // Register IDE notifiers for file open/close/save events
   RegisterIDENotifiers;
 
@@ -356,6 +364,15 @@ finalization
 
   // 6. Remove UI elements (menu items and handler)
   RemoveToolsMenu;
+
+  // 6.5. Unregister IDE Options page (must come before RemoveWizard — Pitfall 2 prevention)
+  if GAddInOptions <> nil then
+  begin
+    var LEnvOptSvc: INTAEnvironmentOptionsServices;
+    if Supports(BorlandIDEServices, INTAEnvironmentOptionsServices, LEnvOptSvc) then
+      LEnvOptSvc.UnregisterAddInOptions(GAddInOptions);
+    GAddInOptions := nil;
+  end;
 
   // 7. Remove wizard registration
   if GWizardIndex >= 0 then

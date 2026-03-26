@@ -83,6 +83,11 @@
         <DCCReference Include="DX.Blame.Statusbar.pas"/>
         <DCCReference Include="DX.Blame.KeyBinding.pas"/>
         <DCCReference Include="DX.Blame.Navigation.pas"/>
+        <DCCReference Include="DX.Blame.Settings.Frame.pas">
+            <Form>FrameDXBlameSettings</Form>
+            <DesignClass>TFrame</DesignClass>
+        </DCCReference>
+        <DCCReference Include="DX.Blame.Settings.Options.pas"/>
         <DCCReference Include="DX.Blame.Settings.Form.pas">
             <Form>FormDXBlameSettings</Form>
         </DCCReference>

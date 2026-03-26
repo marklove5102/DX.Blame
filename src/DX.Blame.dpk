@@ -62,6 +62,8 @@ contains
   DX.Blame.Statusbar in 'DX.Blame.Statusbar.pas',
   DX.Blame.KeyBinding in 'DX.Blame.KeyBinding.pas',
   DX.Blame.Navigation in 'DX.Blame.Navigation.pas',
+  DX.Blame.Settings.Frame in 'DX.Blame.Settings.Frame.pas' {FrameDXBlameSettings: TFrame},
+  DX.Blame.Settings.Options in 'DX.Blame.Settings.Options.pas',
   DX.Blame.Settings.Form in 'DX.Blame.Settings.Form.pas' {FormDXBlameSettings},
   DX.Blame.Engine in 'DX.Blame.Engine.pas',
   DX.Blame.IDE.Notifier in 'DX.Blame.IDE.Notifier.pas',

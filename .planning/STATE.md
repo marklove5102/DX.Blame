@@ -4,7 +4,7 @@ milestone: v1.2
 milestone_name: UX Polish & Settings
 status: executing
 stopped_at: Completed 13-02-PLAN.md (Context menu toggle and auto-scroll)
-last_updated: "2026-03-26T22:18:29.022Z"
+last_updated: "2026-03-26T22:22:48.590Z"
 last_activity: "2026-03-26 — Completed plan 13-01: Statusbar blame display with GOnCaretMoved callback"
 progress:
   total_phases: 3

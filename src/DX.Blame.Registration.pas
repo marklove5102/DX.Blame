@@ -101,9 +101,10 @@ end;
 procedure BlameAlreadyOpenFiles;
 var
   LModuleServices: IOTAModuleServices;
-  i: Integer;
+  i, j: Integer;
   LModule: IOTAModule;
   LFileName: string;
+  LEditor: IOTAEditor;
 begin
   if not Supports(BorlandIDEServices, IOTAModuleServices, LModuleServices) then
     Exit;
@@ -113,9 +114,19 @@ begin
     LModule := LModuleServices.Modules[i];
     if LModule = nil then
       Continue;
-    LFileName := LModule.FileName;
-    if LFileName <> '' then
-      BlameEngine.RequestBlame(LFileName);
+
+    // IOTAModule.FileName may return .dproj for project modules.
+    // Iterate editors to get actual source file names (.dpr, .pas, etc.)
+    for j := 0 to LModule.ModuleFileCount - 1 do
+    begin
+      LEditor := LModule.ModuleFileEditors[j];
+      if LEditor <> nil then
+      begin
+        LFileName := LEditor.FileName;
+        if LFileName <> '' then
+          BlameEngine.RequestBlame(LFileName);
+      end;
+    end;
   end;
 end;
 

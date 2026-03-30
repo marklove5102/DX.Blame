@@ -541,12 +541,10 @@ end;
 
 function TBlameEngine.IsSourceFile(const AFileName: string): Boolean;
 var
-  LExt: string;
   LFileLower: string;
   LRootLower: string;
 begin
-  LExt := LowerCase(ExtractFileExt(AFileName));
-  Result := (LExt = '.pas') or (LExt = '.dpr') or (LExt = '.dpk') or (LExt = '.inc');
+  Result := ExtractFileExt(AFileName) <> '';
 
   // Only blame files inside the repository
   if Result and (FRepoRoot <> '') then

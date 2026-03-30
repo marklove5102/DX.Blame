@@ -220,7 +220,7 @@ initialization
   if Assigned(SplashScreenServices) then
   begin
     SplashScreenServices.AddPluginBitmap(
-      cDXBlameName,
+      cDXBlameName + ' V' + cDXBlameVersion,
       LoadBitmap(FindResourceHInstance(HInstance), 'DXBLAMESPLASH'),
       False,
       cDXBlameDescription

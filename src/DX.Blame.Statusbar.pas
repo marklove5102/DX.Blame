@@ -126,7 +126,32 @@ begin
   end;
 end;
 
+/// <summary>
+/// Finds the index of the encoding panel (contains "ANSI", "UTF", etc.)
+/// Returns -1 if not found.
+/// </summary>
+function FindEncodingPanelIndex(AStatusBar: TStatusBar): Integer;
+var
+  i: Integer;
+  LText: string;
+begin
+  Result := -1;
+  for i := 0 to AStatusBar.Panels.Count - 1 do
+  begin
+    LText := UpperCase(AStatusBar.Panels[i].Text);
+    if LText.Contains('ANSI') or LText.Contains('UTF') or
+       LText.Contains('ASCII') or LText.Contains('UNICODE') then
+    begin
+      Result := i;
+      Exit;
+    end;
+  end;
+end;
+
 procedure TDXBlameStatusbar.AttachToStatusBar(AStatusBar: TStatusBar);
+var
+  LInsertIndex: Integer;
+  LEncodingIdx: Integer;
 begin
   // Detach from previous statusbar if any
   DetachFromStatusBar;
@@ -138,12 +163,18 @@ begin
   // Register for FreeNotification so we learn when the statusbar is destroyed
   AStatusBar.FreeNotification(Self);
 
-  // Add the blame panel at the end
-  FPanel := FStatusBar.Panels.Add;
-  FPanel.Width := 300;
-  FPanel.Style := psText;
-  FPanel.Text := '';
-  FPanelIndex := FPanel.Index;
+  // Insert the blame panel right after the encoding panel for a stable position.
+  // If encoding panel doesn't exist yet (IDE hasn't populated), defer to UpdateForLine.
+  LEncodingIdx := FindEncodingPanelIndex(FStatusBar);
+  if LEncodingIdx >= 0 then
+  begin
+    LInsertIndex := LEncodingIdx + 1;
+    FPanel := TStatusPanel(FStatusBar.Panels.Insert(LInsertIndex));
+    FPanel.Width := 300;
+    FPanel.Style := psText;
+    FPanel.Text := '';
+    FPanelIndex := FPanel.Index;
+  end;
 
   // Chain the existing mouse handlers
   FFOldOnMouseDown := FStatusBar.OnMouseDown;
@@ -153,6 +184,8 @@ begin
 end;
 
 procedure TDXBlameStatusbar.DetachFromStatusBar;
+var
+  i: Integer;
 begin
   if FStatusBar = nil then
     Exit;
@@ -161,11 +194,18 @@ begin
   FStatusBar.OnMouseDown := FFOldOnMouseDown;
   FStatusBar.OnMouseMove := FFOldOnMouseMove;
 
-  // Remove the panel if still valid
-  if (FPanel <> nil) and (FPanelIndex >= 0) and
-     (FPanelIndex < FStatusBar.Panels.Count) and
-     (FStatusBar.Panels.Items[FPanelIndex] = FPanel) then
-    FStatusBar.Panels.Delete(FPanelIndex);
+  // Remove the panel by reference (index may have shifted)
+  if FPanel <> nil then
+  begin
+    for i := 0 to FStatusBar.Panels.Count - 1 do
+    begin
+      if FStatusBar.Panels.Items[i] = FPanel then
+      begin
+        FStatusBar.Panels.Delete(i);
+        Break;
+      end;
+    end;
+  end;
 
   // Unregister FreeNotification
   FStatusBar.RemoveFreeNotification(Self);
@@ -174,6 +214,7 @@ begin
   FStatusBar := nil;
   FPanelIndex := -1;
   FFOldOnMouseDown := nil;
+  FFOldOnMouseMove := nil;
 end;
 
 procedure TDXBlameStatusbar.UpdateForLine(const AFileName: string;
@@ -183,6 +224,21 @@ var
   LLineIndex: Integer;
   LText: string;
 begin
+  // Lazy re-attach: if panel was not inserted yet (e.g. encoding panel didn't
+  // exist at load time), try again now that the IDE has populated the statusbar
+  if (FPanel = nil) and (FStatusBar <> nil) then
+  begin
+    var LEncodingIdx := FindEncodingPanelIndex(FStatusBar);
+    if LEncodingIdx >= 0 then
+    begin
+      FPanel := TStatusPanel(FStatusBar.Panels.Insert(LEncodingIdx + 1));
+      FPanel.Width := 300;
+      FPanel.Style := psText;
+      FPanel.Text := '';
+      FPanelIndex := FPanel.Index;
+    end;
+  end;
+
   if (FPanel = nil) or (FStatusBar = nil) then
     Exit;
 
@@ -229,12 +285,26 @@ function TDXBlameStatusbar.IsClickOnOurPanel(X: Integer): Boolean;
 var
   LPanelLeft: Integer;
   i: Integer;
+  LCurrentIndex: Integer;
 begin
   Result := False;
-  if (FPanel = nil) or (FPanelIndex < 0) then
+  if (FPanel = nil) or (FStatusBar = nil) then
     Exit;
+
+  // Find our panel's current index (may shift if IDE adds/removes panels)
+  LCurrentIndex := -1;
+  for i := 0 to FStatusBar.Panels.Count - 1 do
+    if FStatusBar.Panels.Items[i] = FPanel then
+    begin
+      LCurrentIndex := i;
+      Break;
+    end;
+
+  if LCurrentIndex < 0 then
+    Exit;
+
   LPanelLeft := 0;
-  for i := 0 to FPanelIndex - 1 do
+  for i := 0 to LCurrentIndex - 1 do
     LPanelLeft := LPanelLeft + FStatusBar.Panels.Items[i].Width;
   Result := (X >= LPanelLeft) and (X < LPanelLeft + FPanel.Width);
 end;

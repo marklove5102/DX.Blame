@@ -285,14 +285,10 @@ begin
   end;
 
   // Register renderer and keyboard binding for inline blame display.
-  // On Delphi 13+ use TDXBlameRendererD13 (adds INTACodeEditorEvents370:
-  // event-consuming clicks and caret tracking via EditorSetCaretPos).
-  // On Delphi 12, TDXBlameRenderer is used directly.
-  {$IF CompilerVersion >= 37.0}
-  RegisterRenderer(TDXBlameRendererD13.Create);
-  {$ELSE}
-  RegisterRenderer(TDXBlameRenderer.Create);
-  {$IFEND}
+  // CreateBlameRenderer returns TDXBlameRendererD13 on D13+ (with
+  // INTACodeEditorEvents370) or TDXBlameRenderer on D12 — resolved
+  // via uses-clause shadowing, no IFDEF needed here.
+  RegisterRenderer(CreateBlameRenderer);
   RegisterKeyBinding;
 
   // Wire callback so KeyBinding can sync menu checkmark without circular dependency

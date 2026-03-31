@@ -59,11 +59,19 @@ type
     procedure EditorSetCaretPos(const Editor: TWinControl; X, Y: Integer);
   end;
 
+/// <summary>Creates the D13 renderer with INTACodeEditorEvents370 support.</summary>
+function CreateBlameRenderer: INTACodeEditorEvents;
+
 {$IFEND}
 
 implementation
 
 {$IF CompilerVersion >= 37.0}
+
+function CreateBlameRenderer: INTACodeEditorEvents;
+begin
+  Result := TDXBlameRendererD13.Create;
+end;
 
 { TDXBlameRendererD13 }
 

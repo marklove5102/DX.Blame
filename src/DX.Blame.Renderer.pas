@@ -88,6 +88,9 @@ type
       var Handled: Boolean);
   end;
 
+/// <summary>Creates the appropriate renderer for the current Delphi version.</summary>
+function CreateBlameRenderer: INTACodeEditorEvents;
+
 /// <summary>Registers the renderer notifier with the IDE editor services.</summary>
 procedure RegisterRenderer(ANotifier: INTACodeEditorEvents);
 
@@ -716,6 +719,11 @@ end;
 procedure CleanupPopup;
 begin
   FreeAndNil(GPopup);
+end;
+
+function CreateBlameRenderer: INTACodeEditorEvents;
+begin
+  Result := TDXBlameRenderer.Create;
 end;
 
 procedure RegisterRenderer(ANotifier: INTACodeEditorEvents);

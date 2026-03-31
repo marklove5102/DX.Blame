@@ -36,8 +36,8 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <SanitizedProjectName>DX_Blame</SanitizedProjectName>
-        <DCC_BplOutput>..\build\$(Platform)\$(Config)</DCC_BplOutput>
-        <DCC_DcpOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcpOutput>
+        <DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
+        <DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
         <DCC_DcuOutput>..\build\$(Platform)\$(Config)\dcu</DCC_DcuOutput>
         <DllSuffix>$(Auto)</DllSuffix>
         <GenDll>true</GenDll>

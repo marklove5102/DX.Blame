@@ -40,6 +40,9 @@ uses
   DX.Blame.IDE.Notifier,
   DX.Blame.Engine,
   DX.Blame.Renderer,
+  {$IF CompilerVersion >= 37.0}
+  DX.Blame.Renderer.D13,
+  {$IFEND}
   DX.Blame.Statusbar,
   DX.Blame.KeyBinding,
   DX.Blame.Settings,
@@ -281,8 +284,15 @@ begin
       BlameEngine.Initialize(ExtractFileDir(LProject.FileName));
   end;
 
-  // Register renderer and keyboard binding for inline blame display
-  RegisterRenderer;
+  // Register renderer and keyboard binding for inline blame display.
+  // On Delphi 13+ use TDXBlameRendererD13 (adds INTACodeEditorEvents370:
+  // event-consuming clicks and caret tracking via EditorSetCaretPos).
+  // On Delphi 12, TDXBlameRenderer is used directly.
+  {$IF CompilerVersion >= 37.0}
+  RegisterRenderer(TDXBlameRendererD13.Create);
+  {$ELSE}
+  RegisterRenderer(TDXBlameRenderer.Create);
+  {$IFEND}
   RegisterKeyBinding;
 
   // Wire callback so KeyBinding can sync menu checkmark without circular dependency

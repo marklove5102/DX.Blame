@@ -314,11 +314,6 @@ begin
     Exit;
   end;
 
-  // Skip annotation when buffer has been modified since last save --
-  // blame cache is stale and line indices would map to wrong lines
-  if Context.EditView.Buffer.IsModified then
-    Exit;
-
   // Index into Lines array (0-based, LogicalLineNum is 1-based)
   LLineIndex := LLogicalLine - 1;
   if (LLineIndex < 0) or (LLineIndex >= Length(LBlameData.Lines)) then

@@ -358,10 +358,7 @@ begin
   LTimer.Free;
 
   if LKey <> '' then
-  begin
-    FCache.Invalidate(LKey);
     RequestBlame(LKey);
-  end;
 end;
 
 procedure TBlameEngine.CancelAndRemove(const AFileName: string);

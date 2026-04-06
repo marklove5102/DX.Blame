@@ -121,6 +121,7 @@ uses
   DX.Blame.Formatter,
   DX.Blame.Engine,
   DX.Blame.VCS.Types,
+  DX.Blame.Git.Types,
   DX.Blame.Cache,
   DX.Blame.Popup,
   DX.Blame.CommitDetail;
@@ -251,6 +252,11 @@ var
   LHashText: string;
   LRestText: string;
   LHashWidth: Integer;
+  LEditorText: string;
+  LBestIndex: Integer;
+  LBestDist: Integer;
+  LDist: Integer;
+  i: Integer;
 begin
   {$IFDEF DEBUG}
   if GPaintDebugCount < 20 then
@@ -314,15 +320,54 @@ begin
     Exit;
   end;
 
-  // Index into Lines array (0-based, LogicalLineNum is 1-based)
+  // Match current editor line against blame data.
+  // 1) Try exact index first (fast path for unmodified files)
+  // 2) If text differs, search all blame lines for nearest positional match
+  //    (handles inserted/deleted lines shifting positions)
+  // 3) No match found -> "Not committed yet" (truly new or edited content)
+  LEditorText := Context.LineState.Text.TrimRight;
   LLineIndex := LLogicalLine - 1;
-  if (LLineIndex < 0) or (LLineIndex >= Length(LBlameData.Lines)) then
-    Exit;
 
-  // Format the annotation text
-  LText := FormatBlameAnnotation(LBlameData.Lines[LLineIndex], BlameSettings);
-  if LText = '' then
-    Exit;
+  if (LLineIndex >= 0) and (LLineIndex < Length(LBlameData.Lines))
+    and (LEditorText = LBlameData.Lines[LLineIndex].OriginalText.TrimRight) then
+  begin
+    // Fast path: exact index match
+    LText := FormatBlameAnnotation(LBlameData.Lines[LLineIndex], BlameSettings);
+    if LText = '' then
+      Exit;
+  end
+  else
+  begin
+    // Search all blame lines for matching text, prefer closest position
+    LBestIndex := -1;
+    LBestDist := MaxInt;
+    for i := 0 to Length(LBlameData.Lines) - 1 do
+    begin
+      if LEditorText = LBlameData.Lines[i].OriginalText.TrimRight then
+      begin
+        LDist := Abs(i - (LLogicalLine - 1));
+        if LDist < LBestDist then
+        begin
+          LBestDist := LDist;
+          LBestIndex := i;
+        end;
+      end;
+    end;
+
+    if LBestIndex >= 0 then
+    begin
+      LLineIndex := LBestIndex;
+      LText := FormatBlameAnnotation(LBlameData.Lines[LLineIndex], BlameSettings);
+      if LText = '' then
+        Exit;
+    end
+    else
+    begin
+      // No matching text found -- line was edited or is entirely new
+      LLineIndex := -1;
+      LText := cNotCommittedAuthor;
+    end;
+  end;
 
   LCanvas := Context.Canvas;
 
@@ -375,7 +420,7 @@ begin
     LCanvas.Brush.Style := bsClear;
 
     // Render annotation text
-    if BlameSettings.PopupTrigger = ptClick then
+    if (BlameSettings.PopupTrigger = ptClick) and (LLineIndex >= 0) then
     begin
       // Click mode: underlined hash prefix (hotlink) + italic rest
       LHashLen := GetAnnotationClickableLength(LBlameData.Lines[LLineIndex], BlameSettings);

@@ -154,38 +154,38 @@ var
 begin
   LFileName := FFileName;
   LEngine := FEngine;
+  try
+    LExitCode := FProvider.ExecuteBlame(FRepoRoot, FFileName, LOutput, FProcessHandle);
 
-  LExitCode := FProvider.ExecuteBlame(FRepoRoot, FFileName, LOutput, FProcessHandle);
+    if Terminated then
+      Exit;
 
-  if Terminated then
-    Exit;
+    if LExitCode = 0 then
+    begin
+      LLines := FProvider.ParseBlameOutput(LOutput);
+      LData := TBlameData.Create(LFileName);
+      LData.Lines := LLines;
+      LData.Timestamp := Now;
 
-  if LExitCode = 0 then
-  begin
-    LLines := FProvider.ParseBlameOutput(LOutput);
-    LData := TBlameData.Create(LFileName);
-    LData.Lines := LLines;
-    LData.Timestamp := Now;
-
-    // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
+      TThread.Queue(nil,
+        procedure
+        begin
+          LEngine.HandleBlameComplete(LFileName, LData);
+        end);
+    end
+    else
+    begin
+      TThread.Queue(nil,
+        procedure
+        begin
+          LEngine.HandleBlameError(LFileName, LOutput);
+        end);
+    end;
+  finally
+    // Always unregister — prevents dangling pointer in FActiveThreads when
+    // Execute exits via exception, Terminated check, or normal completion.
+    // Safe to call even if CancelAndRemove already removed the entry.
     LEngine.UnregisterThread(LowerCase(LFileName));
-
-    TThread.Queue(nil,
-      procedure
-      begin
-        LEngine.HandleBlameComplete(LFileName, LData);
-      end);
-  end
-  else
-  begin
-    // Unregister BEFORE Queue to prevent dangling pointer race with FreeOnTerminate
-    LEngine.UnregisterThread(LowerCase(LFileName));
-
-    TThread.Queue(nil,
-      procedure
-      begin
-        LEngine.HandleBlameError(LFileName, LOutput);
-      end);
   end;
 end;
 

@@ -3,7 +3,7 @@ object FormDXBlameSettings: TFormDXBlameSettings
   Top = 0
   BorderStyle = bsDialog
   Caption = 'DX Blame Settings'
-  ClientHeight = 765
+  ClientHeight = 785
   ClientWidth = 500
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -267,7 +267,7 @@ object FormDXBlameSettings: TFormDXBlameSettings
     Left = 12
     Top = 630
     Width = 476
-    Height = 75
+    Height = 95
     Caption = ' Diagnostics '
     TabOrder = 5
     object CheckBoxEnableDebugLogging: TCheckBox
@@ -288,10 +288,20 @@ object FormDXBlameSettings: TFormDXBlameSettings
       State = cbChecked
       TabOrder = 1
     end
+    object CheckBoxForceClickInDebug: TCheckBox
+      Left = 16
+      Top = 70
+      Width = 444
+      Height = 17
+      Caption = 'Force click-trigger during debugging (disable hover)'
+      Checked = True
+      State = cbChecked
+      TabOrder = 2
+    end
   end
   object ButtonResetDefaults: TButton
     Left = 12
-    Top = 721
+    Top = 741
     Width = 120
     Height = 28
     Caption = 'Reset to Defaults'
@@ -300,7 +310,7 @@ object FormDXBlameSettings: TFormDXBlameSettings
   end
   object ButtonOK: TButton
     Left = 320
-    Top = 721
+    Top = 741
     Width = 80
     Height = 28
     Caption = 'OK'
@@ -311,7 +321,7 @@ object FormDXBlameSettings: TFormDXBlameSettings
   end
   object ButtonCancel: TButton
     Left = 408
-    Top = 721
+    Top = 741
     Width = 80
     Height = 28
     Cancel = True

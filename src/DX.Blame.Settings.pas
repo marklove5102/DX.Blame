@@ -58,6 +58,7 @@ type
     FShowStatusbar: Boolean;
     FEnableDebugLogging: Boolean;
     FSuppressPopupInDebug: Boolean;
+    FForceClickInDebug: Boolean;
   public
     constructor Create;
 
@@ -97,6 +98,8 @@ type
     property EnableDebugLogging: Boolean read FEnableDebugLogging write FEnableDebugLogging;
     /// <summary>When True, hover/click popups are suppressed while the IDE debugger is active.</summary>
     property SuppressPopupInDebug: Boolean read FSuppressPopupInDebug write FSuppressPopupInDebug;
+    /// <summary>When True, popup trigger is forced to click-mode while the IDE debugger is active (hover is suppressed).</summary>
+    property ForceClickInDebug: Boolean read FForceClickInDebug write FForceClickInDebug;
   end;
 
 /// <summary>Returns the singleton TDXBlameSettings instance (lazy-initialized).</summary>
@@ -151,6 +154,7 @@ begin
   FEnableDebugLogging := False;
   {$ENDIF}
   FSuppressPopupInDebug := True;
+  FForceClickInDebug := True;
 end;
 
 class function TDXBlameSettings.GetSettingsPath: string;
@@ -223,6 +227,7 @@ begin
     FEnableDebugLogging := LIni.ReadBool('Debug', 'EnableDebugLogging', False);
     {$ENDIF}
     FSuppressPopupInDebug := LIni.ReadBool('Debug', 'SuppressPopupInDebug', True);
+    FForceClickInDebug := LIni.ReadBool('Debug', 'ForceClickInDebug', True);
   finally
     LIni.Free;
   end;
@@ -278,6 +283,7 @@ begin
     LIni.WriteBool('Display', 'ShowStatusbar', FShowStatusbar);
     LIni.WriteBool('Debug', 'EnableDebugLogging', FEnableDebugLogging);
     LIni.WriteBool('Debug', 'SuppressPopupInDebug', FSuppressPopupInDebug);
+    LIni.WriteBool('Debug', 'ForceClickInDebug', FForceClickInDebug);
   finally
     LIni.Free;
   end;

@@ -697,6 +697,10 @@ begin
   if BlameSettings.SuppressPopupInDebug and IsDebuggerRunning then
     Exit;
 
+  // Force click-mode during debugging: suppress hover-triggered popups
+  if BlameSettings.ForceClickInDebug and IsDebuggerRunning then
+    Exit;
+
   // After scroll-dismiss, suppress hover until mouse physically moves
   if GScrollHideSuppressActive then
   begin
